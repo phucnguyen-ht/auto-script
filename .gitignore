@@ -1,0 +1,8 @@
+aws.sh
+logs/
+profiling_result/
+*.pyc
+tmp_profile_*.yaml
+__pycache__/
+summary/
+*.zip

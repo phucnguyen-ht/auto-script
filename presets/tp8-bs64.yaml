@@ -1,0 +1,72 @@
+# env_vars:
+#   VLLM_MOREH_IS_DECODE_WORKER: "both"
+#   VLLM_MOREH_SCHEDULER_LOGGING: "1"
+#   VLLM_MOREH_SCHEDULER_LOG_INTERVAL: "3"
+#   VLLM_MOREH_USE_PD_SEPARATION: "1"
+#   VLLM_SERVER_DEV_MODE: "1"
+
+#   VLLM_ROCM_USE_AITER: "1"
+#   VLLM_ROCM_USE_AITER_MOE: "1"
+#   VLLM_MOREH_USE_CUSTOM_ATTN_BACKEND: "1"
+#   VLLM_ROCM_QUICK_REDUCE_QUANTIZATION: "INT4"
+#   VLLM_MOREH_DSA_USE_PAGED_MQA_LOGITS_2STAGES: "0"
+#   VLLM_ROCM_USE_AITER_FUSION_SHARED_EXPERTS: "1"
+#   VLLM_MOREH_INDEX_CACHE_ENABLED: "0"
+#   VLLM_MOREH_USE_FUSED_TOPK_INDEXER_LOGITS: "0"
+#   VLLM_MOREH_USE_MHA_FOR_PREFILL: "0"
+#   VLLM_MOREH_INDEXER_M_SPLIT: "1"
+#   VLLM_MOREH_USE_CUSTOM_PAGED_MQA_LOGITS: "1"
+#   VLLM_MOREH_USE_CUSTOM_FP8_MQA_LOGITS: "1"
+
+#   VLLM_MOREH_USE_AITER_CUSTOM_AR: "0"
+#   VLLM_MOREH_MTP_CUDAGRAPH_ONLY: "1"
+
+# parallelism_args:
+#   tensor_parallel_size: 8
+# engine_args:
+#   trust_remote_code: true
+#   block_size: 1
+#   gpu_memory_utilization: 0.8
+#   attention_backend: "ROCM_AITER_MLA_SPARSE"
+#   quantization: "fp8_per_block_to_per_token_for_glm5"
+#   kv_cache_dtype: "fp8_e4m3"
+#   max_num_batched_token: 16384
+#   compilation_config: '{"cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 52, 54, 56, 58, 60, 62, 64]}'  # hf_overrides: '{"index_topk_pattern":"FSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFSFS"}'
+#   scheduler-cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+#   speculative_config: '{"method": "mtp", "num_speculative_tokens": 2}'
+
+#   # enforce_eager: true
+env_vars:
+  VLLM_ROCM_USE_AITER: "1"
+  VLLM_ROCM_USE_AITER_MOE: "1"
+  VLLM_MOREH_USE_CUSTOM_ATTN_BACKEND: "1"
+  VLLM_ROCM_QUICK_REDUCE_QUANTIZATION: "INT4"
+  VLLM_MOREH_DSA_USE_PAGED_MQA_LOGITS_2STAGES: "0"
+  VLLM_MOREH_USE_FUSED_TOPK_INDEXER_LOGITS: "0"
+  VLLM_MOREH_INDEXER_M_SPLIT: "1"
+  VLLM_MOREH_USE_CUSTOM_PAGED_MQA_LOGITS: "0"
+  VLLM_MOREH_USE_CUSTOM_FP8_MQA_LOGITS: "1"
+  VLLM_MOREH_USE_CP_GATHER_INDEXER_K_QUANT_CACHE: "1"
+
+  VLLM_MOREH_MTP_CUDAGRAPH_ONLY: "1"
+
+  VLLM_MOREH_IS_DECODE_WORKER: "both"
+  VLLM_MOREH_SCHEDULER_LOGGING: "1"
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: "3"
+  VLLM_MOREH_USE_PD_SEPARATION: "1"
+
+  VLLM_SERVER_DEV_MODE: "1"
+
+parallelism_args:
+  tensor_parallel_size: 8
+engine_args:
+  trust_remote_code: true
+  block_size: 64
+  gpu_memory_utilization: 0.8
+  attention_backend: "ROCM_AITER_MLA_SPARSE"
+  quantization: "fp8_per_block_to_per_token_for_glm5"
+  kv_cache_dtype: "fp8_e4m3"
+  compilation_config: '{"custom_ops": ["+rotary_embedding"], "cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60]}'
+  # compilation_config: '{"cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,22,23,24,25,26,27,28,29,30,31,32,33,36,39,42,45,48]}'
+  speculative_config: '{"method":"mtp","num_speculative_tokens":2}'
+  scheduler-cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
