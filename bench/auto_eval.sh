@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Auto-serve vLLM then run RepoBench evaluation.
+# Auto-serve vLLM then run the eval datasets enabled in env.yaml.
+#
+# Which datasets run is driven by env.yaml -> eval.datasets:
+#   repobench  -> RepoBench (generate predictions + compute metrics)
+#   mmlu       -> lm_eval task: mmlu
+#   gsm8k      -> lm_eval task: gsm8k
+#   longbench  -> lm_eval task: longbench_single   (needs lm-eval[longbench])
+#   longbench2 -> lm_eval task: longbench2_single  (needs lm-eval[longbench])
+# Set a dataset to 1 to run it, 0 to skip. Any value can still be overridden by
+# the matching env var (GENERATE/RUN_EVAL for RepoBench, LMEVAL_TASKS for lm_eval).
 #
 # Examples:
 #   bash auto_eval.sh
@@ -9,6 +18,7 @@ set -euo pipefail
 #   LEVELS=128k NUM_PROMPTS=8 bash auto_eval.sh
 #   OUTPUT_DIR=/path/to/result GENERATE=0 bash auto_eval.sh
 #   EXTRA_REQUEST_BODY='{"ignore_eos": true}' bash auto_eval.sh
+#   LMEVAL_TASKS="mmlu gsm8k" bash auto_eval.sh   # override env.yaml selection
 #   AUTO_SERVE=0 bash auto_eval.sh            # bring your own server
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,15 +27,35 @@ ENV_YAML="${ROOT_DIR}/../env.yaml"
 PRESETS_DIR="${ROOT_DIR}/../presets"
 SERVE_SH="${ROOT_DIR}/../serve.sh"
 BENCH_DIR="${ROOT_DIR}/../bench"
+REPOBENCH_DIR="${ROOT_DIR}/../repobench"
 
 if ! command -v yq >/dev/null 2>&1; then
     echo "[ERROR] yq is required. Run serve.sh once to auto-install it."
     exit 1
 fi
 
+# ===========================================================
+# Which datasets to run, read from env.yaml -> eval.datasets.
+# A missing / unset key defaults to 0 (skip).
+# ===========================================================
+eval_flag() {
+    # $1 = dataset key. Echoes its value from env.yaml, or 0 if missing.
+    if [ -f "${ENV_YAML}" ]; then
+        yq e ".eval.datasets.${1} // 0" "${ENV_YAML}"
+    else
+        echo 0
+    fi
+}
+
+EVAL_REPOBENCH="$(eval_flag repobench)"
+EVAL_MMLU="$(eval_flag mmlu)"
+EVAL_GSM8K="$(eval_flag gsm8k)"
+EVAL_LONGBENCH="$(eval_flag longbench)"
+EVAL_LONGBENCH2="$(eval_flag longbench2)"
+
 # Preset yaml to use when auto-starting the server.
 # Override with: PRESET_YAML=/path/to/preset.yaml bash auto_eval.sh
-PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-profile.yaml}"
+PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
 
 # Set AUTO_SERVE=0 to manage the server yourself.
 AUTO_SERVE="${AUTO_SERVE:-1}"
@@ -41,7 +71,7 @@ else
     MODEL_PATH="${MODEL_PATH:-/remote/vast0/share-mv/zai-org/GLM-5-FP8}"
 fi
 
-REPOBENCH_DIR="${REPOBENCH_DIR:-/shared/amdgpu/home/loc_tran_ce6/phucnguyen/mv-blocksize-64/customer-poc-delivery/repobench}"
+# REPOBENCH_DIR="${REPOBENCH_DIR:-/shared/amdgpu/home/loc_tran_ce6/phucnguyen/mv-blocksize-64/customer-poc-delivery/repobench}"
 BASE_URL="${BASE_URL:-http://localhost:8000}"
 COMPLETIONS_URL="${COMPLETIONS_URL:-}"
 
@@ -64,8 +94,10 @@ DATASET_TAG="$(basename "${DATASET_PATH%.*}")"
 OUTPUT_DIR="${OUTPUT_DIR:-${RUN_DIR}/repobench_eval_results}"
 EVAL_LOG="${EVAL_LOG:-${RUN_DIR}/eval.log}"
 
-GENERATE="${GENERATE:-1}"
-RUN_EVAL="${RUN_EVAL:-1}"
+# RepoBench = generate predictions (GENERATE) + compute metrics (RUN_EVAL).
+# Both default to env.yaml's eval.datasets.repobench but stay overridable.
+GENERATE="${GENERATE:-${EVAL_REPOBENCH}}"
+RUN_EVAL="${RUN_EVAL:-${EVAL_REPOBENCH}}"
 RESUME="${RESUME:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 
@@ -134,6 +166,7 @@ is_enabled() {
 
 print_config() {
   cat <<EOF
+Eval datasets (env.yaml): repobench=$EVAL_REPOBENCH mmlu=$EVAL_MMLU gsm8k=$EVAL_GSM8K longbench=$EVAL_LONGBENCH longbench2=$EVAL_LONGBENCH2
 RepoBench dir: $REPOBENCH_DIR
 Model: $MODEL_PATH
 Base URL: $BASE_URL
@@ -154,14 +187,17 @@ Resume: $RESUME
 EOF
 }
 
-if [[ ! -d "$REPOBENCH_DIR" ]]; then
-  echo "RepoBench dir not found: $REPOBENCH_DIR" >&2
-  exit 1
-fi
+# Only require the RepoBench dir/dataset when RepoBench is actually selected.
+if is_enabled "$GENERATE" || is_enabled "$RUN_EVAL"; then
+  if [[ ! -d "$REPOBENCH_DIR" ]]; then
+    echo "RepoBench dir not found: $REPOBENCH_DIR" >&2
+    exit 1
+  fi
 
-if [[ ! -f "$DATASET_PATH" ]]; then
-  echo "Dataset file not found: $DATASET_PATH" >&2
-  exit 1
+  if [[ ! -f "$DATASET_PATH" ]]; then
+    echo "Dataset file not found: $DATASET_PATH" >&2
+    exit 1
+  fi
 fi
 
 print_config
@@ -196,7 +232,15 @@ if is_enabled "$AUTO_SERVE"; then
         echo "[ERROR] Preset not found: ${PRESET_YAML}" >&2
         exit 1
     fi
+    # Ensure VLLM is cleaned up on exit no matter which phase started it.
+    trap 'kill_vllm' EXIT
+fi
 
+# This first server (original preset) is only needed to GENERATE RepoBench
+# predictions. RepoBench metrics (RUN_EVAL) run offline on the generated files,
+# and lm_eval restarts its own server below — so skip this start when generation
+# is disabled (e.g. only lm_eval datasets are selected).
+if is_enabled "$AUTO_SERVE" && is_enabled "$GENERATE"; then
     wait_for_gpu_free
 
     pkill -9 VLLM 2>/dev/null || true
@@ -207,8 +251,6 @@ if is_enabled "$AUTO_SERVE"; then
     echo "[serve] Log: ${SERVE_LOG}"
     (bash "${SERVE_SH}" "${MODEL_PATH}" "${PRESET_YAML}") >"${SERVE_LOG}" 2>&1 &
     echo "[serve] PID: $!"
-
-    trap 'kill_vllm' EXIT
 
     if ! wait_for_server; then
         echo "[ERROR] Server failed to start. Aborting."
@@ -515,11 +557,37 @@ fi
 # tasks (mmlu, gsm8k). When AUTO_SERVE=1, we restart the server with
 # a temporary preset that has scheduler-cls stripped out.
 #
+# The task list is built from env.yaml -> eval.datasets (dataset key ->
+# lm_eval task name: mmlu, gsm8k, longbench->longbench_single,
+# longbench2->longbench2_single) unless LMEVAL_TASKS is set explicitly.
+#
 # Tắt: RUN_LMEVAL=0 bash auto_eval.sh
 # Đổi task: LMEVAL_TASKS="mmlu gsm8k longbench_single" bash auto_eval.sh
 # ===========================================================
-RUN_LMEVAL="${RUN_LMEVAL:-1}"
-LMEVAL_TASKS="${LMEVAL_TASKS:-mmlu gsm8k}"
+
+# Map enabled env.yaml datasets to lm_eval task names, in a stable order.
+build_lmeval_tasks() {
+    local tasks=()
+    is_enabled "${EVAL_MMLU}"       && tasks+=("mmlu")
+    is_enabled "${EVAL_GSM8K}"      && tasks+=("gsm8k")
+    is_enabled "${EVAL_LONGBENCH}"  && tasks+=("longbench_single")
+    is_enabled "${EVAL_LONGBENCH2}" && tasks+=("longbench2_single")
+    echo "${tasks[*]}"
+}
+
+LMEVAL_TASKS="${LMEVAL_TASKS:-$(build_lmeval_tasks)}"
+# longbench_single / longbench2_single need the lm-eval[longbench] extra.
+LMEVAL_NEEDS_LONGBENCH=0
+case " ${LMEVAL_TASKS} " in
+    *" longbench_single "*|*" longbench2_single "*) LMEVAL_NEEDS_LONGBENCH=1 ;;
+esac
+
+# Run lm_eval only if there is at least one task selected.
+if [ -n "${LMEVAL_TASKS// /}" ]; then
+    RUN_LMEVAL="${RUN_LMEVAL:-1}"
+else
+    RUN_LMEVAL="${RUN_LMEVAL:-0}"
+fi
 LMEVAL_CONCURRENCY="${LMEVAL_CONCURRENCY:-8}"
 LMEVAL_MAX_RETRIES="${LMEVAL_MAX_RETRIES:-3}"
 LMEVAL_TIMEOUT="${LMEVAL_TIMEOUT:-3600}"
@@ -545,9 +613,19 @@ if is_enabled "$RUN_LMEVAL" && is_enabled "$AUTO_SERVE"; then
 fi
 
 if is_enabled "$RUN_LMEVAL"; then
+    pip_targets=()
     if ! command -v lm_eval >/dev/null 2>&1; then
-        echo "[lm_eval] installing lm-eval[api]..."
-        if ! pip install 'lm-eval[api]' >/dev/null; then
+        pip_targets+=('lm-eval[api]')
+    fi
+    if [ "${LMEVAL_NEEDS_LONGBENCH}" -eq 1 ]; then
+        # hf_transfer speeds up the longbench dataset download; the [longbench]
+        # extra pulls in its dependencies. Installed even if lm_eval already
+        # exists, since the extra may be missing.
+        pip_targets+=(hf_transfer 'lm-eval[longbench]')
+    fi
+    if [ "${#pip_targets[@]}" -gt 0 ]; then
+        echo "[lm_eval] installing: ${pip_targets[*]}"
+        if ! pip install "${pip_targets[@]}" >/dev/null; then
             echo "[lm_eval][ERROR] pip install failed; skipping lm_eval block." >&2
             RUN_LMEVAL=0
         fi

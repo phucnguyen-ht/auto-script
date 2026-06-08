@@ -15,8 +15,8 @@ customer-poc-delivery/
 ├── env.yaml                # Shared config: model path, profiler flags, eval datasets
 ├── serve.sh                # VLLM server startup script (shared by profile/, bench/, eval/)
 ├── presets/                # Shared VLLM preset yamls
-│   ├── *-0ic-profile.yaml  # Index-cache disabled (VLLM_MOREH_INDEX_CACHE_ENABLED=0)
-│   └── *-50ic-profile.yaml # Index-cache enabled  (VLLM_MOREH_INDEX_CACHE_ENABLED=1)
+│   ├── *-0ic.yaml  # Index-cache disabled (VLLM_MOREH_INDEX_CACHE_ENABLED=0)
+│   └── *-50ic.yaml # Index-cache enabled  (VLLM_MOREH_INDEX_CACHE_ENABLED=1)
 ├── profile/
 │   ├── auto_profile.sh     # Orchestrates all profiling runs
 │   ├── profile_0cachehit/  # bench.sh + profiling_result/ for 0% cache-hit
@@ -62,8 +62,8 @@ The two presets in `presets/` differ only in index-cache configuration:
 
 | Preset | `VLLM_MOREH_INDEX_CACHE_ENABLED` | `hf_overrides` |
 |---|---|---|
-| `*-0ic-profile.yaml` | `"0"` | disabled |
-| `*-50ic-profile.yaml` | `"1"` | enabled |
+| `*-0ic.yaml` | `"0"` | disabled |
+| `*-50ic.yaml` | `"1"` | enabled |
 
 `no_enable_prefix_caching` is **not** stored in the preset files — it is injected at runtime:
 

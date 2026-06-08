@@ -4,18 +4,18 @@
 #
 # Usage:
 #   bash run_all.sh
-#   PRESET=zai-org-glm-5-fp8-amd-mi325x-tp8-moe-tp8-0ic-profile-ar.yaml bash run_all.sh
+#   PRESET=zai-org-glm-5-fp8-amd-mi325x-tp8-moe-tp8-0ic-ar.yaml bash run_all.sh
 #   PRESET=/absolute/path/to/preset.yaml bash run_all.sh
 #
 # Compare two presets back-to-back (A/B):
 #   bash run_all.sh
-#   PRESET=zai-org-glm-5-fp8-amd-mi325x-tp8-moe-tp8-50ic-profile.yaml bash run_all.sh
+#   PRESET=zai-org-glm-5-fp8-amd-mi325x-tp8-moe-tp8-50ic.yaml bash run_all.sh
 #
 # PRESET resolution order (first hit wins):
 #   1. $PRESET (or fallback $PRESET_YAML) if it already points to an existing file
 #   2. ../presets/<value>               — pass just the filename, no path needed
 #   3. ./<value>                        — relative to this script's dir
-#   4. ../presets/zai-org-glm-5-fp8-amd-mi325x-tp8-moe-tp8-0ic-profile.yaml  (default)
+#   4. ../presets/zai-org-glm-5-fp8-amd-mi325x-tp8-moe-tp8-0ic.yaml  (default)
 #
 # Exported: PRESET_YAML — all child scripts (auto_bench / auto_profile /
 # auto_eval / auto_readable) read this env-var, so one assignment here drives
@@ -26,6 +26,13 @@
 #   RUN_PROFILE=0  bash run_all.sh
 #   RUN_EVAL=0     bash run_all.sh
 #   RUN_READABLE=0 bash run_all.sh
+#
+# Accurate profiling needs eager mode (cudagraph/compile off). Set
+# ENFORCE_EAGER_PROFILE=1 (default 0) to run ONLY the profile phase against a
+# generated copy of the preset with engine_args.enforce_eager=true. The other
+# phases (bench/eval/readable) keep the original preset so their perf numbers
+# are unaffected.
+#   ENFORCE_EAGER_PROFILE=1 bash run_all.sh
 
 set -euo pipefail
 
@@ -55,7 +62,7 @@ fi
 # ---------------------------------------------------------------------------
 # Preset resolution
 # ---------------------------------------------------------------------------
-DEFAULT_PRESET="${PRESETS_DIR}/zai-org-glm-5-fp8-amd-mi325x-tp8-moe-tp8-0ic-profile.yaml"
+DEFAULT_PRESET="${PRESETS_DIR}/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml"
 PRESET="${PRESET:-${PRESET_YAML:-${DEFAULT_PRESET}}}"
 
 if [[ -f "${PRESET}" ]]; then
@@ -85,6 +92,9 @@ RUN_PROFILE="${RUN_PROFILE:-1}"
 RUN_EVAL="${RUN_EVAL:-1}"
 RUN_READABLE="${RUN_READABLE:-1}"
 
+# When 1, the profile phase gets a preset variant with enforce_eager:true.
+ENFORCE_EAGER_PROFILE="${ENFORCE_EAGER_PROFILE:-0}"
+
 is_enabled() {
   case "${1,,}" in 1|true|yes|y|on) return 0 ;; *) return 1 ;; esac
 }
@@ -107,6 +117,7 @@ run_all.sh (newbench2)
   preset      : ${PRESET}
   master log  : ${MASTER_LOG_DIR}
   phases      : bench=${RUN_BENCH} profile=${RUN_PROFILE} eval=${RUN_EVAL} readable=${RUN_READABLE}
+  enforce_eager(profile): ${ENFORCE_EAGER_PROFILE}
   started at  : $(date)
 ========================================================================
 EOF
@@ -136,10 +147,20 @@ if is_enabled "${RUN_BENCH}"; then
     phase bench bash "${SCRIPT_DIR}/auto_bench.sh"
 fi
 
-# if is_enabled "${RUN_PROFILE}"; then
-#     rm -rf /root/.cache/vllm/torch_compile_cache/
-#     phase profile bash "${SCRIPT_DIR}/auto_profile.sh"
-# fi
+if is_enabled "${RUN_PROFILE}"; then
+    rm -rf /root/.cache/vllm/torch_compile_cache/
+    # Accurate profiling needs eager mode. When ENFORCE_EAGER_PROFILE=1, profile
+    # against a generated preset copy with enforce_eager:true; other phases are
+    # untouched. PRESET_YAML is overridden only for this child invocation.
+    profile_preset="${PRESET}"
+    if is_enabled "${ENFORCE_EAGER_PROFILE}"; then
+        profile_preset="${MASTER_LOG_DIR}/preset.profile_enforce_eager.yaml"
+        yq '.engine_args.enforce_eager = true' "${PRESET}" > "${profile_preset}"
+        echo "[run_all] ENFORCE_EAGER_PROFILE=1 -> profiling with enforce_eager:true"
+        echo "[run_all]   preset: ${profile_preset}"
+    fi
+    PRESET_YAML="${profile_preset}" phase profile bash "${SCRIPT_DIR}/auto_profile.sh"
+fi
 
 if is_enabled "${RUN_EVAL}"; then
     rm -rf /root/.cache/vllm/torch_compile_cache/

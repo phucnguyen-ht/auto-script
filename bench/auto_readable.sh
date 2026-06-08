@@ -111,7 +111,7 @@ run_readable() {
     if [ -n "${PRESET_YAML:-}" ]; then
         ic_yaml="${PRESET_YAML}"
     else
-        ic_yaml="${PRESETS_DIR}/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-${ic_suffix}ic-profile.yaml"
+        ic_yaml="${PRESETS_DIR}/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-${ic_suffix}ic.yaml"
     fi
     local result_dir="${RUN_DIR}/ic${ic_suffix}"
     mkdir -p "${result_dir}"
