@@ -47,7 +47,7 @@ else
 fi
 
 # Preset used to start the server. Override with PRESET_YAML=…
-PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
+PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
 
 # Profile activities forwarded to bench_serving_glm4p5_65k.sh --profile-activities
 PROFILE_ACTIVITIES="${PROFILE_ACTIVITIES:-CPU GPU}"

@@ -19,7 +19,8 @@ if ! command -v yq >/dev/null 2>&1; then
     exit 1
 fi
 
-MODEL_PATH=$(yq e '.model.path' "${ENV_YAML}")
+# Honor MODEL_PATH if exported by run_all.sh (per-family); else env.yaml default.
+MODEL_PATH="${MODEL_PATH:-$(yq e '.model.path' "${ENV_YAML}")}"
 
 AUTO_LOG_DIR="${SCRIPT_DIR}/logs/auto_readable2"
 ts="$(date +%Y%m%d_%H%M%S)"

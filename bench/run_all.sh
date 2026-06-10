@@ -59,10 +59,15 @@ if ! command -v yq >/dev/null 2>&1; then
   install_yq
 fi
 
+pip install --no-cache-dir --force-reinstall \
+  codebleu==0.7.0 \
+  tree-sitter==0.22.3 \
+  tree-sitter-python==0.21.0 fuzzywuzzy fire
+
 # ---------------------------------------------------------------------------
 # Preset resolution
 # ---------------------------------------------------------------------------
-DEFAULT_PRESET="${PRESETS_DIR}/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml"
+DEFAULT_PRESET="${PRESETS_DIR}/glm5/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml"
 PRESET="${PRESET:-${PRESET_YAML:-${DEFAULT_PRESET}}}"
 
 if [[ -f "${PRESET}" ]]; then
@@ -83,6 +88,30 @@ PRESET="$(cd "$(dirname "${PRESET}")" && pwd)/$(basename "${PRESET}")"
 
 # Export once — every child script picks this up automatically.
 export PRESET_YAML="${PRESET}"
+
+# ---------------------------------------------------------------------------
+# Model path resolution by preset family.
+#
+# The family is the top-level presets/ subfolder of the chosen preset
+# (presets/<family>/...). We look up model.paths.<family> in env.yaml and
+# export MODEL_PATH so every child script (auto_bench/profile/eval/readable)
+# uses the right checkpoint. If the preset is not under presets/ or the family
+# has no entry, MODEL_PATH is left unset and children fall back to
+# env.yaml's model.path default.
+# ---------------------------------------------------------------------------
+ENV_YAML="${SCRIPT_DIR}/../env.yaml"
+abs_presets="$(cd "${PRESETS_DIR}" && pwd)"
+preset_rel="${PRESET#"${abs_presets}/"}"
+if [[ "${preset_rel}" != "${PRESET}" && "${preset_rel}" == */* ]]; then
+    preset_family="${preset_rel%%/*}"
+    fam_path="$(yq e ".model.paths.${preset_family} // \"\"" "${ENV_YAML}")"
+    if [[ -n "${fam_path}" && "${fam_path}" != "null" ]]; then
+        export MODEL_PATH="${fam_path}"
+        echo "[run_all] preset family=${preset_family} -> MODEL_PATH=${MODEL_PATH}"
+    else
+        echo "[run_all] preset family=${preset_family} has no model.paths entry; using env.yaml model.path default" >&2
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # Phase toggles
@@ -142,10 +171,10 @@ phase() {
 # ---------------------------------------------------------------------------
 # Chain
 # ---------------------------------------------------------------------------
-if is_enabled "${RUN_BENCH}"; then
-    rm -rf /root/.cache/vllm/torch_compile_cache/
-    phase bench bash "${SCRIPT_DIR}/auto_bench.sh"
-fi
+# if is_enabled "${RUN_BENCH}"; then
+#     rm -rf /root/.cache/vllm/torch_compile_cache/
+#     phase bench bash "${SCRIPT_DIR}/auto_bench.sh"
+# fi
 
 if is_enabled "${RUN_PROFILE}"; then
     rm -rf /root/.cache/vllm/torch_compile_cache/

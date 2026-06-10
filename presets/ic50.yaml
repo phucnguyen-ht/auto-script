@@ -23,7 +23,7 @@ parallelism_args:
 engine_args:
   trust_remote_code: true
   block_size: 1
-  gpu_memory_utilization: 0.8
+  gpu_memory_utilization: 0.92
   attention_backend: "ROCM_AITER_MLA_SPARSE"
   quantization: "fp8_per_block_to_per_token_for_glm5"
   kv_cache_dtype: "fp8_e4m3"

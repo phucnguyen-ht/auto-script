@@ -10,7 +10,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-MODEL_PATH="${MODEL_PATH:-/share-mv/zai-org/GLM-5-FP8}"
+# Model path is read from the shared env.yaml (single source of truth), same as
+# auto_bench / auto_profile / auto_eval. Fallback only if env.yaml/yq are absent.
+ENV_YAML="${ROOT_DIR}/../env.yaml"
+if [ -f "${ENV_YAML}" ] && command -v yq >/dev/null 2>&1; then
+    MODEL_PATH="${MODEL_PATH:-$(yq e '.model.path' "${ENV_YAML}")}"
+else
+    MODEL_PATH="${MODEL_PATH:-/share-mv/zai-org/GLM-5-FP8}"
+fi
 # DATASET="${DATASET:-$ROOT_DIR/benchmark_root/data/input/glm_4p5_testcase_65536.jsonl}"
 DATASET="${DATASET:-$ROOT_DIR/part_shard0.jsonl}"
 BASE_URL="${BASE_URL:-http://localhost:8000}"

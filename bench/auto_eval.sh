@@ -55,7 +55,7 @@ EVAL_LONGBENCH2="$(eval_flag longbench2)"
 
 # Preset yaml to use when auto-starting the server.
 # Override with: PRESET_YAML=/path/to/preset.yaml bash auto_eval.sh
-PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
+PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
 
 # Set AUTO_SERVE=0 to manage the server yourself.
 AUTO_SERVE="${AUTO_SERVE:-1}"

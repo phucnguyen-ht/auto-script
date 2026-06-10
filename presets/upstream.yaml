@@ -26,13 +26,16 @@ parallelism_args:
 engine_args:
   trust_remote_code: true
   block_size: 64
-  gpu_memory_utilization: 0.8
+  gpu_memory_utilization: 0.92
   attention_backend: "ROCM_AITER_MLA_SPARSE"
   quantization: "fp8_per_block_to_per_token_for_glm5"
   kv_cache_dtype: "fp8_e4m3"
   compilation_config: '{"custom_ops": ["+rotary_embedding"], "cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60]}'
   # speculative_config: '{"method":"mtp","num_speculative_tokens":2}'
-  scheduler-cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  # scheduler-cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
   # profiler_config: '{"profiler":"torch","torch_profiler_dir":"logs/vllm_torch_profiler_mtp2","torch_profiler_with_stack":"False","torch_profiler_record_shapes":"False","torch_profiler_with_memory":"False","torch_profiler_with_flops":"False"}'
+  reasoning_parser: glm45
+  enable_auto_tool_choice: true
+  tool_call_parser: glm47
 
   enforce-eager: true
