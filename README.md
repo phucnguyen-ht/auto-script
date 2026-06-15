@@ -60,6 +60,10 @@ eval:
 predictions + compute metrics (wrapped). mmlu/gsm8k/longbench/longbench2 are
 lm_eval tasks run N times each.
 
+gsm8k supports a `method` field: `lm_eval` (default, `local-completions`) or
+`script` — the latter runs `datasets/gsm8k/gsm8k.py` (chat-completions runner
+with a custom task yaml). Example: `gsm8k: { runs: 1, method: script }`.
+
 ## Run
 
 ```bash

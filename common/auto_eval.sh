@@ -377,17 +377,30 @@ if [ "${LMEVAL_TOTAL}" -gt 0 ]; then
         n="${LMEVAL_RUNS[$ds]}"
         [ "${n}" -gt 0 ] || continue
         task="${LMEVAL_TASK[$ds]}"
+        # method: lm_eval (standard local-completions) or script
+        # (datasets/<ds>/<ds>.py, e.g. gsm8k's chat-completions runner).
+        method="$(yaml_get ".eval.datasets.${ds}.method" lm_eval)"
         for i in $(seq 1 "${n}"); do
             task_out="${RUN_DIR}/lm_eval/${task}/run${i}"
             mkdir -p "${task_out}"
-            echo "========== lm_eval ${task} run ${i}/${n} -> ${task_out} =========="
-            lm_eval --model local-completions \
-                --tasks "${task}" \
-                --model_args "model=${MODEL_PATH},base_url=${LMEVAL_URL},num_concurrent=${LMEVAL_CONCURRENCY},max_retries=${LMEVAL_MAX_RETRIES},tokenized_requests=False,timeout=${LMEVAL_TIMEOUT}" \
-                --output_path "${task_out}" \
-                2>&1 | tee "${task_out}/eval.log"
+            echo "========== ${ds} (${method}) run ${i}/${n} -> ${task_out} =========="
+            if [ "${method}" = "script" ]; then
+                ( cd "${AUTO_ROOT}/datasets/${ds}" && \
+                  EVAL_MODEL="${MODEL_PATH}" \
+                  EVAL_BASE_URL="${BASE_URL}" \
+                  EVAL_TASKS="${ds}.yaml" \
+                  EVAL_OUTPUT_PATH="${task_out}" \
+                  EVAL_NUM_CONCURRENT="${LMEVAL_CONCURRENCY}" \
+                  python3 "${ds}.py" ) 2>&1 | tee "${task_out}/eval.log"
+            else
+                lm_eval --model local-completions \
+                    --tasks "${task}" \
+                    --model_args "model=${MODEL_PATH},base_url=${LMEVAL_URL},num_concurrent=${LMEVAL_CONCURRENCY},max_retries=${LMEVAL_MAX_RETRIES},tokenized_requests=False,timeout=${LMEVAL_TIMEOUT}" \
+                    --output_path "${task_out}" \
+                    2>&1 | tee "${task_out}/eval.log"
+            fi
             status=${PIPESTATUS[0]}
-            [ "${status}" -ne 0 ] && echo "[lm_eval][WARN] ${task} run ${i} exited ${status}; continuing." >&2
+            [ "${status}" -ne 0 ] && echo "[eval][WARN] ${ds} run ${i} exited ${status}; continuing." >&2
         done
     done
 fi
