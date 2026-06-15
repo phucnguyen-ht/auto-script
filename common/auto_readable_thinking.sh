@@ -9,6 +9,7 @@ source "${COMMON_DIR}/helper.sh"
 resolve_backend
 PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/bs64-dg.yaml}"
 resolve_model_path
+AUTO_SERVE="${AUTO_SERVE:-1}"
 setup_run_dir auto_readable_thinking
 
 CURL_URL="${BASE_URL}/v1/chat/completions"
@@ -52,15 +53,14 @@ run() {
 
 echo "=== auto_readable_thinking.sh started at $(date) (backend=${BACKEND}) ==="
 
-if [ "${BACKEND,,}" != "sglang" ] && [ ! -f "${PRESET_YAML}" ]; then
-    echo "[ERROR] preset not found: ${PRESET_YAML}" >&2; exit 1
+if is_enabled "${AUTO_SERVE}"; then
+    [ "${BACKEND,,}" = "sglang" ] || [ -f "${PRESET_YAML}" ] || { echo "[ERROR] preset not found: ${PRESET_YAML}" >&2; exit 1; }
+    kill_server
+    serve_backend "${RUN_DIR}/serve.log"
 fi
-
-kill_server
-serve_backend "${RUN_DIR}/serve.log"
-if ! wait_for_server; then echo "[ERROR] server failed to start." >&2; kill_server; exit 1; fi
+if ! wait_for_server; then echo "[ERROR] server not reachable." >&2; is_enabled "${AUTO_SERVE}" && kill_server; exit 1; fi
 
 run 2>&1 | tee "${RUN_DIR}/readable.log"
 
-kill_server
+is_enabled "${AUTO_SERVE}" && kill_server
 echo "=== auto_readable_thinking.sh done at $(date) ==="

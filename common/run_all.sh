@@ -24,17 +24,9 @@ export DATA_DIR="${DATA_DIR:-${SCRIPT_DIR}}"
 
 source "${COMMON_DIR}/helper.sh"   # also installs yq via ensure_yq
 
-# Preset resolution (vLLM). First existing of: $PRESET, presets/$PRESET, ./$PRESET.
-DEFAULT_PRESET="${PRESETS_DIR}/glm5/dp8ep8/bs64-dg.yaml"
-PRESET="${PRESET:-${PRESET_YAML:-${DEFAULT_PRESET}}}"
-if [[ -f "${PRESET}" ]]; then :
-elif [[ -f "${PRESETS_DIR}/${PRESET}" ]]; then PRESET="${PRESETS_DIR}/${PRESET}"
-elif [[ -f "${SCRIPT_DIR}/${PRESET}" ]]; then PRESET="${SCRIPT_DIR}/${PRESET}"
-else echo "[run_all] ERROR: preset not found: ${PRESET}" >&2; exit 1; fi
-PRESET="$(cd "$(dirname "${PRESET}")" && pwd)/$(basename "${PRESET}")"
-export PRESET_YAML="${PRESET}"
-resolve_preset_name; export PRESET_NAME
-PRESET_FAMILY="$(preset_family)"
+# Preset resolution (vLLM) — shared with the debug serve.sh / eval_*.sh helpers.
+BACKEND=vllm resolve_preset
+export PRESET_YAML PRESET_NAME
 
 BACKENDS_TO_RUN="${BACKEND:-$(backends_list)}"
 

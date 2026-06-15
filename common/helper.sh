@@ -132,6 +132,23 @@ resolve_preset_name() {
     fi
 }
 
+# resolve_preset — resolve PRESET (env or default) to an absolute path and set
+# PRESET_YAML, PRESET_NAME, PRESET_FAMILY. Lookup order: $PRESET as-is, under
+# presets/, then under DATA_DIR (the ticket dir). Skipped for sglang (no preset).
+resolve_preset() {
+    [ "${BACKEND,,}" = "sglang" ] && { PRESET_YAML=""; PRESET_NAME="${PRESET_NAME:-sglang}"; PRESET_FAMILY=""; return 0; }
+    local def="${PRESETS_DIR}/glm5/dp8ep8/bs64-dg.yaml"
+    local p="${PRESET:-${PRESET_YAML:-${def}}}"
+    if [ -f "${p}" ]; then :
+    elif [ -f "${PRESETS_DIR}/${p}" ]; then p="${PRESETS_DIR}/${p}"
+    elif [ -f "${DATA_DIR}/${p}" ]; then p="${DATA_DIR}/${p}"
+    else echo "[ERROR] preset not found: ${p}" >&2; exit 1; fi
+    PRESET_YAML="$(cd "$(dirname "${p}")" && pwd)/$(basename "${p}")"
+    PRESET="${PRESET_YAML}"
+    PRESET_NAME=""; resolve_preset_name
+    PRESET_FAMILY="$(preset_family)"
+}
+
 # setup_run_dir <phase> — sets RUN_DIR=<LOG_ROOT>/<preset>/<phase>/<ts> (sglang
 # variant under <LOG_ROOT>_sglang) and creates it.
 setup_run_dir() {
