@@ -1,20 +1,27 @@
-IMAGE="255250787067.dkr.ecr.ap-northeast-2.amazonaws.com/unencrypted/moreh-vllm:0.17.0-260422-dccf357-hsa"
-WORKING_DIR="/shared/amdgpu/home/loc_tran_ce6/phucnguyen"
-CONTAINER_NAME=$1
+WORKING_DIR=/home/phuc-nguyen/workspace/mv-4476
+CONTAINER_NAME=phuc-nguyen-mv-4476
+SETUP_DEV=${SETUP_DEV:-0}
 
-podman run -ti -d \
-  --ipc=host --network=host \
-  --group-add render \
-  --privileged \
-  --security-opt seccomp=unconfined \
+if [ "$SETUP_DEV" = "1" ] && [ ! -d "$WORKING_DIR/vllm-moreh" ]; then
+  git clone --recursive https://github.com/moreh-dev/vllm-moreh.git "$WORKING_DIR/vllm-moreh"
+fi
+
+docker run -d \
+  --ipc=host --network=host --group-add render \
+  --privileged --security-opt seccomp=unconfined \
   --cap-add=CAP_SYS_ADMIN --cap-add=SYS_PTRACE \
   --device=/dev/kfd --device=/dev/dri --device=/dev/mem \
-  -v "/shared/amdgpu/home/loc_tran_ce6/share-mv/zai-org:/share-mv/zai-org" \
+  -v /remote/vast0/share-mv:/remote/vast0/share-mv \
   -v $WORKING_DIR:$WORKING_DIR \
   -w $WORKING_DIR \
-  --name "${CONTAINER_NAME}" \
-  -e PYTORCH_ROCM_ARCH="gfx942" \
-  --entrypoint /bin/bash \
-  "${IMAGE}"
+  --name $CONTAINER_NAME \
+  --entrypoint bash \
+  vllm/vllm-openai-rocm:v0.21.0 \
+  -lc 'sleep infinity'
 
-podman exec -ti "${CONTAINER_NAME}" bash
+if [ "$SETUP_DEV" = "1" ]; then
+  docker exec -ti $CONTAINER_NAME bash -lc \
+    "git config --global --add safe.directory '*' && cd $WORKING_DIR/vllm-moreh && WORKING_DIR=$WORKING_DIR/vllm-moreh source scripts/utils/setup_dev.sh; exec bash"
+else
+  docker exec -ti $CONTAINER_NAME bash
+fi
