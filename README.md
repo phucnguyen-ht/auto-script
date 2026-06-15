@@ -62,6 +62,12 @@ eval:
     gsm8k:     { runs: 1 }
 ```
 
+Phase order is per-ticket via `phases:` in the ticket env.yaml (default
+`[readable, eval]` if omitted). `readable`/`eval` are handled by the shared
+driver; any other name (e.g. `bench`, `profile`) is delegated to the ticket's
+`ticket_phase()`. Example — eval before readable: `phases: [eval, readable]`.
+`RUN_*=0` still toggles a phase off regardless of order.
+
 `runs` = number of times to run (0 = skip). One repobench run = generate
 predictions + compute metrics (wrapped). mmlu/gsm8k/longbench/longbench2 are
 lm_eval tasks run N times each.
@@ -85,6 +91,22 @@ Run a single phase standalone (it serves/kills its own server):
 ```bash
 PRESET_YAML=$PWD/../presets/glm5/dp8ep8/bs64-dg.yaml bash ../common/auto_eval.sh
 AUTO_SERVE=0 BASE_URL=http://localhost:8000 bash ../common/auto_readable.sh
+```
+
+## Debug (split serve vs downstream)
+
+To debug a ticket, split serving from the downstream task — same log/result layout
+as the auto_* phases. `serve.sh` stays in `common/` (ticket has a thin wrapper);
+`eval.sh` / `readable.sh` are per-ticket and just run against the live server
+(`AUTO_SERVE=0`), driven by whatever you set in `env.yaml`:
+
+```bash
+cd bench_mv4476
+bash serve.sh                      # terminal 1: serve only (foreground, eval-ready)
+PRESET=kimi2.6/... bash serve.sh   # match the preset you want to debug
+# terminal 2 — uses the running server, logs under logs/<preset>/...:
+PRESET=kimi2.6/... bash eval.sh        # runs the eval datasets enabled in env.yaml
+PRESET=kimi2.6/... bash readable.sh    # runs the readable smoke tests
 ```
 
 ## Add a new ticket

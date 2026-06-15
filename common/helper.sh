@@ -70,6 +70,13 @@ backend_field() {
     yq e ".backends[] | select(.name == \"$1\") | .$2 // \"\"" "${ENV_YAML}" 2>/dev/null | head -n1
 }
 
+# phases_list — ordered phase names from env.yaml .phases (default: readable eval).
+phases_list() {
+    local p; p="$(yq e '.phases[]' "${ENV_YAML}" 2>/dev/null | tr '\n' ' ')"
+    [ -z "${p// /}" ] && p="readable eval"
+    printf '%s' "$p"
+}
+
 # preset_family — top-level presets/ subfolder of PRESET_YAML (e.g. glm5).
 preset_family() {
     [ -z "${PRESET_YAML:-}" ] && return 0

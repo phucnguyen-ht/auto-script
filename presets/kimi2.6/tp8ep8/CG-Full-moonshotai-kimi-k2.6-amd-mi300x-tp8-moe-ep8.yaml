@@ -1,0 +1,16 @@
+env_vars:
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '0'
+parallelism_args:
+  tensor_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  attention_backend: ROCM_AITER_MLA
+  trust_remote_code: true
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.9
+  kv_cache_dtype: auto
+  compilation_config: '{"cudagraph_mode": "FULL_AND_PIECEWISE"}'
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2

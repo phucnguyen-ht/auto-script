@@ -378,10 +378,12 @@ if [ "${LMEVAL_TOTAL}" -gt 0 ]; then
         [ "${n}" -gt 0 ] || continue
         task="${LMEVAL_TASK[$ds]}"
         # method: lm_eval (standard local-completions) or script
-        # (datasets/<ds>/<ds>.py, e.g. gsm8k's chat-completions runner).
+        # (datasets/<ds>/<ds>.py, e.g. gsm8k's chat-completions runner). Each
+        # lands under its own subdir so the two methods don't mix.
         method="$(yaml_get ".eval.datasets.${ds}.method" lm_eval)"
+        [ "${method}" = "script" ] && subdir="custom_script" || subdir="lm_eval"
         for i in $(seq 1 "${n}"); do
-            task_out="${RUN_DIR}/lm_eval/${task}/run${i}"
+            task_out="${RUN_DIR}/${subdir}/${task}/run${i}"
             mkdir -p "${task_out}"
             echo "========== ${ds} (${method}) run ${i}/${n} -> ${task_out} =========="
             if [ "${method}" = "script" ]; then

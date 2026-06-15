@@ -41,7 +41,7 @@ run_all.sh
   backends    : ${BACKENDS_TO_RUN}
   preset      : ${PRESET}
   master log  : ${MASTER_LOG_DIR}
-  phases      : eval=${RUN_EVAL} readable=${RUN_READABLE}$(declare -F ticket_phases >/dev/null && echo " (+ ticket phases)")
+  phases      : $(phases_list)  (toggles: readable=${RUN_READABLE} eval=${RUN_EVAL})
   started at  : $(date)
 ========================================================================
 EOF
@@ -62,19 +62,28 @@ for be in ${BACKENDS_TO_RUN}; do
 
     echo; echo "############### BACKEND=${be} ###############"
 
-    # Ticket-specific phases (e.g. bench/profile). vLLM-only ones should guard
-    # on the backend themselves.
-    declare -F ticket_phases >/dev/null && ticket_phases "${be}"
-
-    if is_enabled "${RUN_READABLE}"; then
-        rm -rf /root/.cache/vllm/torch_compile_cache/
-        phase readable_thinking bash "${COMMON_DIR}/auto_readable_thinking.sh"
-        phase readable bash "${COMMON_DIR}/auto_readable.sh"
-    fi
-    if is_enabled "${RUN_EVAL}"; then
-        rm -rf /root/.cache/vllm/torch_compile_cache/
-        phase eval bash "${COMMON_DIR}/auto_eval.sh"
-    fi
+    # Run phases in the order given by env.yaml .phases (default: readable eval).
+    # readable/eval are handled here; any other name is delegated to the ticket's
+    # ticket_phase() (e.g. bench/profile), which should guard on $BACKEND.
+    for ph in $(phases_list); do
+        case "${ph}" in
+            readable)
+                is_enabled "${RUN_READABLE}" || continue
+                rm -rf /root/.cache/vllm/torch_compile_cache/
+                phase readable_thinking bash "${COMMON_DIR}/auto_readable_thinking.sh"
+                phase readable bash "${COMMON_DIR}/auto_readable.sh"
+                ;;
+            eval)
+                is_enabled "${RUN_EVAL}" || continue
+                rm -rf /root/.cache/vllm/torch_compile_cache/
+                phase eval bash "${COMMON_DIR}/auto_eval.sh"
+                ;;
+            *)
+                if declare -F ticket_phase >/dev/null; then ticket_phase "${ph}"
+                else echo "[run_all] unknown phase '${ph}' (no ticket_phase); skipping." >&2; fi
+                ;;
+        esac
+    done
 done
 
 cat <<EOF
