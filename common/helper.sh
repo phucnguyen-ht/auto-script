@@ -51,6 +51,9 @@ yaml_get() {
     printf '%s' "$v"
 }
 
+# yaml_list <expr> — space-separated items of a yaml sequence (empty if none).
+yaml_list() { yq e "${1}[]" "${ENV_YAML}" 2>/dev/null | tr '\n' ' '; }
+
 # eval_runs <dataset> — integer run count from eval.datasets.<k>.runs (0 if unset).
 eval_runs() {
     local v; v="$(yaml_get ".eval.datasets.$1.runs" 0)"
@@ -210,6 +213,17 @@ kill_server() {
         echo "[kill] SIGKILL VLLM..."; pkill -9 VLLM 2>/dev/null || true
     fi
     sleep 15; echo "[kill] Done."
+}
+
+# profiler_config_json <trace_dir> — moreh torch profiler_config (engine arg),
+# reading flags from .profile.config.*. Inject into a preset before serving.
+profiler_config_json() {
+    printf '{"profiler":"torch","torch_profiler_dir":"%s","torch_profiler_with_stack":"%s","torch_profiler_record_shapes":"%s","torch_profiler_with_memory":"%s","torch_profiler_with_flops":"%s"}' \
+        "$1" \
+        "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_STACK' False)" \
+        "$(yaml_get '.profile.config.TORCH_PROFILER_RECORD_SHAPES' False)" \
+        "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_MEMORY' False)" \
+        "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_FLOPS' False)"
 }
 
 # serve_backend <log> — start the backend in the background. vllm uses

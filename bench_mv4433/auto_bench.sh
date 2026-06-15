@@ -1,36 +1,44 @@
 #!/usr/bin/env bash
-set -euo pipefail
-# Serve vLLM then sweep bench_serving_glm4p5_65k.sh (PROFILE=0) over
-# NUM_PROMPTS_LIST x NUM_ITERS. After each NUM_PROMPTS, mean+std rows are
-# appended to its JSONL result file.
-#
-#   PRESET_YAML=/path bash auto_bench.sh
-#   AUTO_SERVE=0 bash auto_bench.sh
-#   NUM_PROMPTS_LIST="16 18 20 25" NUM_ITERS=3 bash auto_bench.sh
+set -uo pipefail
+# mv-4433 custom bench/profile concrete (bench_serving_glm4p5_65k.sh) on top of
+# ../common/auto_bench_template.sh. MODE=bench (default) | profile (auto_profile.sh
+# calls this with MODE=profile). Config: env.yaml .<MODE>.custom: {runs, prompts[]}.
+# Run-major: each scenario (prompt) accumulates one jsonl across runs; agg_one
+# (append_aggregates) then appends mean/std rows.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-: "${LOG_ROOT:=${SCRIPT_DIR}/logs}"
-source "${SCRIPT_DIR}/../common/helper.sh"
+TICKET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export ENV_YAML="${ENV_YAML:-${TICKET_DIR}/env.yaml}"
+export LOG_ROOT="${LOG_ROOT:-${TICKET_DIR}/logs}"
+export DATA_DIR="${DATA_DIR:-${TICKET_DIR}}"
 
-resolve_backend
-PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/bs64-dg.yaml}"
-resolve_model_path
-AUTO_SERVE="${AUTO_SERVE:-1}"
-setup_run_dir auto_bench
+METHOD=custom
+PROFILE_ACTIVITIES="${PROFILE_ACTIVITIES:-CPU GPU}"
+declare -a SC_NP SC_LABEL
 
-NUM_PROMPTS_LIST="${NUM_PROMPTS_LIST:-16 18 20 25}"
-NUM_ITERS="${NUM_ITERS:-3}"
-RESULT_TAG="${RESULT_TAG:-dp8ep8_mtp2_model_runner_v2}"
-OUTPUT_DIR="${OUTPUT_DIR:-${RUN_DIR}/results}"
-mkdir -p "${OUTPUT_DIR}"
+# populate SCENARIOS (indices) + per-scenario prompt from .<MODE>.custom.prompts.
+load_scenarios() {
+    local prompts j
+    read -r -a prompts <<< "$(yaml_list ".${MODE}.custom.prompts")"
+    for j in "${!prompts[@]}"; do
+        SC_NP[j]="${prompts[$j]}"
+        SC_LABEL[j]="p${prompts[$j]}"
+        SCENARIOS+=("$j")
+    done
+}
 
-cleanup() { is_enabled "${AUTO_SERVE}" && kill_server; }
-trap cleanup EXIT
+# one bench_serving invocation -> appends a row to <RUN_DIR>/<label>.jsonl.
+run_one() {
+    local j="$1" r="$2" prof=0
+    [ "${MODE}" = "profile" ] && prof=1
+    echo "  scenario ${SC_LABEL[j]} (run ${r})"
+    MODEL_PATH="${MODEL_PATH}" PROFILE="${prof}" PROFILE_ACTIVITIES="${PROFILE_ACTIVITIES}" \
+    NUM_PROMPTS="${SC_NP[j]}" OUTPUT_FILE="${RUN_DIR}/${SC_LABEL[j]}.jsonl" \
+        bash "${TICKET_DIR}/bench_serving_glm4p5_65k.sh"
+}
 
-# append_aggregates <jsonl> — append mean ("agg":"mean") + sample std
-# ("agg":"std") rows over all data rows. Numeric scalars averaged; equal-length
-# numeric lists averaged element-wise; other fields copied from the first row.
-# Previous aggregate rows are ignored (idempotent).
+# append_aggregates <jsonl> — append mean ("agg":"mean") + sample std ("agg":"std")
+# rows over all data rows. Numeric scalars averaged; equal-length numeric lists
+# element-wise; other fields copied from the first row. Idempotent.
 append_aggregates() {
     python3 - "$1" <<'PY'
 import json
@@ -116,35 +124,13 @@ print(f"[aggregate] appended mean + std over {len(rows)} run(s) to {path}")
 PY
 }
 
-echo "=== auto_bench.sh started at $(date) ==="
-echo "Preset=${PRESET_YAML} model=${MODEL_PATH}"
-echo "Prompts=${NUM_PROMPTS_LIST} iters=${NUM_ITERS} tag=${RESULT_TAG}"
-echo "Run dir=${RUN_DIR}"
-
-[ -f "${PRESET_YAML}" ] || { echo "[ERROR] Preset not found: ${PRESET_YAML}" >&2; exit 1; }
-
-if is_enabled "${AUTO_SERVE}"; then
-    wait_for_gpu_free
-    kill_server
-    serve_backend "${RUN_DIR}/serve.log"
-    wait_for_server || { echo "[ERROR] Server failed to start." >&2; exit 1; }
-fi
-
-BENCH_LOG="${RUN_DIR}/bench.log"
-NUM_PROMPTS_LIST="${NUM_PROMPTS_LIST//,/ }"
-read -r -a prompts_arr <<< "${NUM_PROMPTS_LIST}"
-
-{
-    for np in "${prompts_arr[@]}"; do
-        np_out_file="${OUTPUT_DIR}/${RESULT_TAG}_${np}.jsonl"
-        for i in $(seq 1 "${NUM_ITERS}"); do
-            echo "========== bench NUM_PROMPTS=${np} iter ${i}/${NUM_ITERS} =========="
-            MODEL_PATH="${MODEL_PATH}" PROFILE=0 NUM_PROMPTS="${np}" \
-            OUTPUT_FILE="${np_out_file}" \
-                bash "${SCRIPT_DIR}/bench_serving_glm4p5_65k.sh"
-        done
-        append_aggregates "${np_out_file}" || echo "[aggregate][WARN] failed for ${np_out_file}"
+# aggregate each scenario's accumulated jsonl.
+aggregate() {
+    local j
+    for j in "${!SC_LABEL[@]}"; do
+        append_aggregates "${RUN_DIR}/${SC_LABEL[j]}.jsonl" \
+            || echo "[aggregate][WARN] failed for ${SC_LABEL[j]}.jsonl" >&2
     done
-} 2>&1 | tee "${BENCH_LOG}"
+}
 
-echo "=== auto_bench.sh completed at $(date). Results: ${OUTPUT_DIR} ==="
+source "${TICKET_DIR}/../common/auto_bench_template.sh"
