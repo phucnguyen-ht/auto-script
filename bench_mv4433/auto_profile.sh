@@ -47,7 +47,7 @@ else
 fi
 
 # Preset used to start the server. Override with PRESET_YAML=…
-PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
+PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/bs64-dg.yaml}"
 
 # Profile activities forwarded to bench_serving_glm4p5_65k.sh --profile-activities
 PROFILE_ACTIVITIES="${PROFILE_ACTIVITIES:-CPU GPU}"
@@ -61,7 +61,19 @@ NUM_PROMPTS_LIST="${NUM_PROMPTS_LIST:-16}"
 NUM_ITERS="${NUM_ITERS:-1}"
 RESULT_TAG="${RESULT_TAG:-dp8ep8_mtp2_model_runner_v2}"
 
-AUTO_LOG_DIR="${SCRIPT_DIR}/logs/auto_profile"
+# Log dirs are keyed by preset: logs/<preset_name>/auto_profile/<ts>. run_all.sh
+# exports PRESET_NAME (kept stable even when profiling a generated
+# enforce_eager preset copy); standalone runs derive it from PRESET_YAML's path
+# relative to presets/ ("/" -> "_", .yaml stripped).
+if [ -z "${PRESET_NAME:-}" ]; then
+    abs_preset="$(cd "$(dirname "${PRESET_YAML}")" && pwd)/$(basename "${PRESET_YAML}")"
+    preset_rel="${abs_preset#"$(cd "${PRESETS_DIR}" && pwd)/"}"
+    [ "${preset_rel}" = "${abs_preset}" ] && preset_rel="$(basename "${abs_preset}")"
+    preset_rel="${preset_rel%.yaml}"
+    PRESET_NAME="${preset_rel//\//_}"
+fi
+
+AUTO_LOG_DIR="${SCRIPT_DIR}/logs/${PRESET_NAME}/auto_profile"
 ts="$(date +%Y%m%d_%H%M%S)"
 RUN_DIR="${AUTO_LOG_DIR}/${ts}"
 mkdir -p "${RUN_DIR}"
@@ -163,10 +175,9 @@ if is_enabled "${AUTO_SERVE}"; then
 
     TMP_YAML="${RUN_DIR}/tmp_preset.yaml"
     PROFILER_CONFIG="${profiler_config_json}" \
-    yq e ".engine_args.profiler_config = strenv(PROFILER_CONFIG)
-          | .parallelism_args.api_server_count = \"1\"" \
+    yq e ".engine_args.profiler_config = strenv(PROFILER_CONFIG)" \
         "${PRESET_YAML}" > "${TMP_YAML}"
-    echo "[yaml] Tmp preset: ${TMP_YAML} (parallelism_args.api_server_count=1)"
+    echo "[yaml] Tmp preset: ${TMP_YAML}"
 
     wait_for_gpu_free
 

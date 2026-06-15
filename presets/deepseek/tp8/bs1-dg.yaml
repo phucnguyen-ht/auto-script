@@ -1,13 +1,12 @@
 env_vars:
   VLLM_ROCM_USE_AITER: "1"
 
+  VLLM_MOREH_INDEXER_M_SPLIT: "1"
   VLLM_MOREH_USE_CP_GATHER_INDEXER_K_QUANT_CACHE: "1"
   VLLM_MOREH_USE_CUSTOM_PAGED_MQA_LOGITS: "0"
 
 parallelism_args:
-  tensor_parallel_size: 1
-  data_parallel_size: 8
-  enable_expert_parallel: true
+  tensor_parallel_size: 8
 
 engine_args:
   block_size: 1
@@ -15,7 +14,7 @@ engine_args:
   max_num_batched_tokens: 8192
   max_num_seqs: 512
   gpu_memory_utilization: "0.85"
-  compilation_config: '{"cudagraph_mode": "NONE", "pass_config": { "fuse_norm_quant": false, "fuse_act_quant": false }}'
+  compilation_config: '{"custom_ops": ["+rotary_embedding"], "cudagraph_mode": "NONE", "pass_config": { "fuse_norm_quant": false, "fuse_act_quant": false }}'
   tokenizer: "deepseek-ai/DeepSeek-V3"
   tokenizer_mode: deepseek_v32
   reasoning_parser: deepseek_v3

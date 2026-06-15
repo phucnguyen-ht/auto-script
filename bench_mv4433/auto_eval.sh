@@ -26,8 +26,20 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_YAML="${ROOT_DIR}/../env.yaml"
 PRESETS_DIR="${ROOT_DIR}/../presets"
 SERVE_SH="${ROOT_DIR}/../serve.sh"
+SERVE_SGLANG_SH="${ROOT_DIR}/serve_sglang_ds3.2.sh"
 BENCH_DIR="${ROOT_DIR}/../bench"
 REPOBENCH_DIR="${ROOT_DIR}/../repobench"
+
+# Backend: vllm (default) or sglang.
+#   vllm   — serve.sh with a preset; logs under logs/<preset_name>/...
+#   sglang — serve_sglang_ds3.2.sh (no preset, DeepSeek-V3.2); logs under
+#            logs_sglang/...; serves on port 30000.
+BACKEND="${BACKEND:-vllm}"
+case "${BACKEND,,}" in
+    vllm)   SERVER_PORT="${SERVER_PORT:-8000}" ;;
+    sglang) SERVER_PORT="${SERVER_PORT:-${SGLANG_PORT:-30000}}" ;;
+    *) echo "[ERROR] BACKEND must be 'vllm' or 'sglang' (got: ${BACKEND})" >&2; exit 1 ;;
+esac
 
 if ! command -v yq >/dev/null 2>&1; then
     echo "[ERROR] yq is required. Run serve.sh once to auto-install it."
@@ -55,24 +67,44 @@ EVAL_LONGBENCH2="$(eval_flag longbench2)"
 
 # Preset yaml to use when auto-starting the server.
 # Override with: PRESET_YAML=/path/to/preset.yaml bash auto_eval.sh
-PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
+PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/bs64-dg.yaml}"
 
 # Set AUTO_SERVE=0 to manage the server yourself.
 AUTO_SERVE="${AUTO_SERVE:-1}"
 
-AUTO_LOG_DIR="${ROOT_DIR}/logs/auto_eval"
+# Log dir layout depends on backend:
+#   vllm   — logs/<preset_name>/auto_eval/<ts>. run_all.sh exports PRESET_NAME;
+#            standalone runs derive it from PRESET_YAML's path relative to
+#            presets/ ("/" -> "_", .yaml stripped).
+#   sglang — logs_sglang/auto_eval/<ts> (no preset).
+if [ "${BACKEND,,}" = "sglang" ]; then
+    AUTO_LOG_DIR="${ROOT_DIR}/logs_sglang/auto_eval"
+else
+    if [ -z "${PRESET_NAME:-}" ]; then
+        abs_preset="$(cd "$(dirname "${PRESET_YAML}")" && pwd)/$(basename "${PRESET_YAML}")"
+        preset_rel="${abs_preset#"$(cd "${PRESETS_DIR}" && pwd)/"}"
+        [ "${preset_rel}" = "${abs_preset}" ] && preset_rel="$(basename "${abs_preset}")"
+        preset_rel="${preset_rel%.yaml}"
+        PRESET_NAME="${preset_rel//\//_}"
+    fi
+    AUTO_LOG_DIR="${ROOT_DIR}/logs/${PRESET_NAME}/auto_eval"
+fi
 ts="$(date +%Y%m%d_%H%M%S)"
 RUN_DIR="${AUTO_LOG_DIR}/${ts}"
 mkdir -p "${RUN_DIR}"
 
-if command -v yq >/dev/null 2>&1 && [ -f "${ENV_YAML}" ]; then
+# SGLang serves DeepSeek-V3.2; MODEL_PATH must match the id passed to
+# serve_sglang_ds3.2.sh --model-path (also used as the client "model" field).
+if [ "${BACKEND,,}" = "sglang" ]; then
+    MODEL_PATH="${MODEL_PATH:-${SGLANG_MODEL_PATH:-/remote/vast0/share-mv/deepseek-ai/DeepSeek-V3.2}}"
+elif command -v yq >/dev/null 2>&1 && [ -f "${ENV_YAML}" ]; then
     MODEL_PATH="${MODEL_PATH:-$(yq e '.model.path' "${ENV_YAML}")}"
 else
     MODEL_PATH="${MODEL_PATH:-/remote/vast0/share-mv/zai-org/GLM-5-FP8}"
 fi
 
 # REPOBENCH_DIR="${REPOBENCH_DIR:-/shared/amdgpu/home/loc_tran_ce6/phucnguyen/mv-blocksize-64/customer-poc-delivery/repobench}"
-BASE_URL="${BASE_URL:-http://localhost:8000}"
+BASE_URL="${BASE_URL:-http://localhost:${SERVER_PORT}}"
 COMPLETIONS_URL="${COMPLETIONS_URL:-}"
 
 # Default dataset lives in the bench/ sibling directory.
@@ -148,13 +180,39 @@ wait_for_server() {
 }
 
 # ===========================================================
-# Helper: kill all VLLM processes
+# Helper: kill the running backend's server processes
 # ===========================================================
-kill_vllm() {
-    echo "[kill] Sending SIGKILL to VLLM processes..."
-    pkill -9 VLLM 2>/dev/null || true
+kill_server() {
+    if [ "${BACKEND,,}" = "sglang" ]; then
+        echo "[kill] Sending SIGKILL to SGLang processes..."
+        # pkill WITHOUT -f matches the process name (comm), so it kills the
+        # sglang server + its setproctitle'd workers ("sglang::...") but never
+        # our bash/tee wrappers (whose comm isn't "sglang") — no self-kill.
+        pkill -9 sglang 2>/dev/null || true
+    else
+        echo "[kill] Sending SIGKILL to VLLM processes..."
+        pkill -9 VLLM 2>/dev/null || true
+    fi
     sleep 15
     echo "[kill] Done."
+}
+
+# ===========================================================
+# Helper: start the configured backend in the background. $1 = log path.
+# vllm uses PRESET_YAML; sglang uses serve_sglang_ds3.2.sh (no preset).
+# ===========================================================
+serve_backend() {
+    local log="$1"
+    if [ "${BACKEND,,}" = "sglang" ]; then
+        echo "[serve] Starting SGLang (model: ${MODEL_PATH}, port: ${SERVER_PORT})"
+        echo "[serve] Log: ${log}"
+        (SGLANG_PORT="${SERVER_PORT}" bash "${SERVE_SGLANG_SH}" "${MODEL_PATH}") >"${log}" 2>&1 &
+    else
+        echo "[serve] Starting vLLM with preset: ${PRESET_YAML}"
+        echo "[serve] Log: ${log}"
+        (bash "${SERVE_SH}" "${MODEL_PATH}" "${PRESET_YAML}") >"${log}" 2>&1 &
+    fi
+    echo "[serve] PID: $!"
 }
 
 is_enabled() {
@@ -166,6 +224,7 @@ is_enabled() {
 
 print_config() {
   cat <<EOF
+Backend: $BACKEND (port $SERVER_PORT)
 Eval datasets (env.yaml): repobench=$EVAL_REPOBENCH mmlu=$EVAL_MMLU gsm8k=$EVAL_GSM8K longbench=$EVAL_LONGBENCH longbench2=$EVAL_LONGBENCH2
 RepoBench dir: $REPOBENCH_DIR
 Model: $MODEL_PATH
@@ -228,12 +287,12 @@ export OUTPUT_DIR
 export RESUME
 
 if is_enabled "$AUTO_SERVE"; then
-    if [ ! -f "${PRESET_YAML}" ]; then
+    if [ "${BACKEND,,}" != "sglang" ] && [ ! -f "${PRESET_YAML}" ]; then
         echo "[ERROR] Preset not found: ${PRESET_YAML}" >&2
         exit 1
     fi
-    # Ensure VLLM is cleaned up on exit no matter which phase started it.
-    trap 'kill_vllm' EXIT
+    # Ensure the server is cleaned up on exit no matter which phase started it.
+    trap 'kill_server' EXIT
 fi
 
 # This first server (original preset) is only needed to GENERATE RepoBench
@@ -243,14 +302,12 @@ fi
 if is_enabled "$AUTO_SERVE" && is_enabled "$GENERATE"; then
     wait_for_gpu_free
 
-    pkill -9 VLLM 2>/dev/null || true
-    sleep 5
+    kill_server
 
-    SERVE_LOG="${RUN_DIR}/serve.log"
-    echo "[serve] Starting server with preset: ${PRESET_YAML}"
-    echo "[serve] Log: ${SERVE_LOG}"
-    (bash "${SERVE_SH}" "${MODEL_PATH}" "${PRESET_YAML}") >"${SERVE_LOG}" 2>&1 &
-    echo "[serve] PID: $!"
+    if ! serve_backend "${RUN_DIR}/serve.log"; then
+        echo "[ERROR] Server failed to start. Aborting."
+        exit 1
+    fi
 
     if ! wait_for_server; then
         echo "[ERROR] Server failed to start. Aborting."
@@ -593,18 +650,27 @@ LMEVAL_MAX_RETRIES="${LMEVAL_MAX_RETRIES:-3}"
 LMEVAL_TIMEOUT="${LMEVAL_TIMEOUT:-3600}"
 
 if is_enabled "$RUN_LMEVAL" && is_enabled "$AUTO_SERVE"; then
-    echo "[serve] Restarting server without scheduler-cls for lm_eval tasks..."
-    kill_vllm
-
-    LMEVAL_PRESET="${RUN_DIR}/preset_no_scheduler_cls.yaml"
-    yq 'del(.engine_args["scheduler-cls"])' "${PRESET_YAML}" > "${LMEVAL_PRESET}"
-    echo "[serve] lm_eval preset written to: ${LMEVAL_PRESET}"
-
     SERVE_LOG_LMEVAL="${RUN_DIR}/serve_lmeval.log"
-    echo "[serve] Starting server for lm_eval: ${LMEVAL_PRESET}"
-    echo "[serve] Log: ${SERVE_LOG_LMEVAL}"
-    (bash "${SERVE_SH}" "${MODEL_PATH}" "${LMEVAL_PRESET}") >"${SERVE_LOG_LMEVAL}" 2>&1 &
-    echo "[serve] PID: $!"
+    if [ "${BACKEND,,}" = "sglang" ]; then
+        # SGLang has no scheduler-cls; just (re)start a fresh server.
+        echo "[serve] (Re)starting SGLang for lm_eval tasks..."
+        kill_server
+        serve_backend "${SERVE_LOG_LMEVAL}"
+    else
+        # PDSLoggingScheduler (scheduler-cls) is incompatible with lm_eval, so
+        # restart vLLM with a preset copy that has scheduler-cls stripped out.
+        echo "[serve] Restarting vLLM without scheduler-cls for lm_eval tasks..."
+        kill_server
+
+        LMEVAL_PRESET="${RUN_DIR}/preset_no_scheduler_cls.yaml"
+        yq 'del(.engine_args["scheduler-cls"])' "${PRESET_YAML}" > "${LMEVAL_PRESET}"
+        echo "[serve] lm_eval preset written to: ${LMEVAL_PRESET}"
+
+        echo "[serve] Starting server for lm_eval: ${LMEVAL_PRESET}"
+        echo "[serve] Log: ${SERVE_LOG_LMEVAL}"
+        (bash "${SERVE_SH}" "${MODEL_PATH}" "${LMEVAL_PRESET}") >"${SERVE_LOG_LMEVAL}" 2>&1 &
+        echo "[serve] PID: $!"
+    fi
 
     if ! wait_for_server; then
         echo "[ERROR] Server failed to start for lm_eval. Aborting."

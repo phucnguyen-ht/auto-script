@@ -6,3 +6,4 @@ tmp_profile_*.yaml
 __pycache__/
 summary/
 *.zip
+logs**

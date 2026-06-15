@@ -47,7 +47,7 @@ else
 fi
 
 # Preset used to start the server. Override with PRESET_YAML=…
-PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/zai-org-glm-5-fp8-amd-mi325x-dp8-moe-tp8-0ic-bs64-dg.yaml}"
+PRESET_YAML="${PRESET_YAML:-${PRESETS_DIR}/glm5/dp8ep8/bs64-dg.yaml}"
 
 # Set AUTO_SERVE=0 to manage the server yourself.
 AUTO_SERVE="${AUTO_SERVE:-1}"
@@ -57,7 +57,18 @@ NUM_PROMPTS_LIST="${NUM_PROMPTS_LIST:-16 18 20 25}"
 NUM_ITERS="${NUM_ITERS:-3}"
 RESULT_TAG="${RESULT_TAG:-dp8ep8_mtp2_model_runner_v2}"
 
-AUTO_LOG_DIR="${SCRIPT_DIR}/logs/auto_bench"
+# Log dirs are keyed by preset: logs/<preset_name>/auto_bench/<ts>. run_all.sh
+# exports PRESET_NAME; standalone runs derive it from PRESET_YAML's path
+# relative to presets/ ("/" -> "_", .yaml stripped).
+if [ -z "${PRESET_NAME:-}" ]; then
+    abs_preset="$(cd "$(dirname "${PRESET_YAML}")" && pwd)/$(basename "${PRESET_YAML}")"
+    preset_rel="${abs_preset#"$(cd "${PRESETS_DIR}" && pwd)/"}"
+    [ "${preset_rel}" = "${abs_preset}" ] && preset_rel="$(basename "${abs_preset}")"
+    preset_rel="${preset_rel%.yaml}"
+    PRESET_NAME="${preset_rel//\//_}"
+fi
+
+AUTO_LOG_DIR="${SCRIPT_DIR}/logs/${PRESET_NAME}/auto_bench"
 ts="$(date +%Y%m%d_%H%M%S)"
 RUN_DIR="${AUTO_LOG_DIR}/${ts}"
 mkdir -p "${RUN_DIR}"
