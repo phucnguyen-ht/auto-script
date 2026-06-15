@@ -58,11 +58,16 @@ eval_runs() {
     printf '%s' "$v"
 }
 
-# backends_list — space-separated backends from env.yaml (default: vllm).
+# backends_list — space-separated backend names from env.yaml (default: vllm).
 backends_list() {
-    local b; b="$(yq e '.backends[]' "${ENV_YAML}" 2>/dev/null | tr '\n' ' ')"
+    local b; b="$(yq e '.backends[].name' "${ENV_YAML}" 2>/dev/null | tr '\n' ' ')"
     [ -z "${b// /}" ] && b="vllm"
     printf '%s' "$b"
+}
+
+# backend_field <name> <field> — a field of the .backends[] entry, or "".
+backend_field() {
+    yq e ".backends[] | select(.name == \"$1\") | .$2 // \"\"" "${ENV_YAML}" 2>/dev/null | head -n1
 }
 
 # preset_family — top-level presets/ subfolder of PRESET_YAML (e.g. glm5).
@@ -80,7 +85,13 @@ resolve_backend() {
     BACKEND="${BACKEND:-$(backends_list | awk '{print $1}')}"
     case "${BACKEND,,}" in
         vllm)   SERVER_PORT="${SERVER_PORT:-8000}" ;;
-        sglang) SERVER_PORT="${SERVER_PORT:-${SGLANG_PORT:-30000}}" ;;
+        sglang)
+            SERVER_PORT="${SERVER_PORT:-${SGLANG_PORT:-30000}}"
+            # sglang has no preset: take its serve script + model family from
+            # the env.yaml backends entry (serve_script relative to auto-script/).
+            SERVE_SGLANG_SH="${SERVE_SGLANG_SH:-$(abspath "$(backend_field sglang serve_script)")}"
+            MODEL_FAMILY="${MODEL_FAMILY:-$(backend_field sglang model)}"
+            ;;
         *) echo "[ERROR] BACKEND must be 'vllm' or 'sglang' (got: ${BACKEND})" >&2; exit 1 ;;
     esac
     BASE_URL="${BASE_URL:-http://localhost:${SERVER_PORT}}"
@@ -89,8 +100,15 @@ resolve_backend() {
 resolve_model_path() {
     [ -n "${MODEL_PATH:-}" ] && return 0
     local fam="${MODEL_FAMILY:-}"
-    [ -z "$fam" ] && { [ "${BACKEND,,}" = "sglang" ] && fam="deepseek" || fam="$(preset_family)"; }
-    MODEL_PATH="$(yaml_get ".model.paths.${fam}")"
+    if [ -z "$fam" ]; then
+        if [ "${BACKEND,,}" = "sglang" ]; then
+            echo "[ERROR] sglang: set the backend's 'model' in env.yaml (or MODEL_PATH)" >&2
+            exit 1
+        fi
+        fam="$(preset_family)"
+    fi
+    # Bracket-index so family keys with dots (e.g. kimi2.6) resolve correctly.
+    MODEL_PATH="$(yaml_get ".model.paths[\"${fam}\"]")"
     if [ -z "${MODEL_PATH}" ]; then
         echo "[ERROR] no model.paths.${fam:-<unknown>} in ${ENV_YAML}" >&2
         exit 1

@@ -8,11 +8,10 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Ticket-specific toggles + the ticket's sglang serve script.
+# Ticket-specific toggles. sglang serve_script/model come from env.yaml.
 RUN_BENCH="${RUN_BENCH:-1}"
 RUN_PROFILE="${RUN_PROFILE:-1}"
 ENFORCE_EAGER_PROFILE="${ENFORCE_EAGER_PROFILE:-0}"
-export SERVE_SGLANG_SH="${SCRIPT_DIR}/serve_sglang_ds3.2.sh"
 
 # bench/profile are vLLM-only; run before the shared readable/eval phases.
 ticket_phases() {

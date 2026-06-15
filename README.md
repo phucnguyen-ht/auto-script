@@ -48,7 +48,13 @@ Global `env.yaml` (base): `model.paths`, profiler flags, and every dataset at
 
 ```yaml
 backends:
-  - vllm
+  - name: vllm
+  # vLLM gets its model from the preset family. sglang has no preset, so its
+  # entry must supply a serve_script (relative to auto-script/) and a model key
+  # (-> model.paths.<model>):
+  # - name: sglang
+  #   serve_script: bench_mv4433/serve_sglang_ds3.2.sh
+  #   model: deepseek
 eval:
   datasets:
     repobench: { runs: 1 }

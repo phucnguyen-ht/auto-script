@@ -4,8 +4,11 @@ set -euo pipefail
 # Run eval ONLY (AUTO_SERVE=0) against a server you started yourself, e.g.:
 #     bash serve_sglang_ds3.2.sh
 # Datasets/run-counts come from env.yaml -> eval.datasets, same as run_all.
+# For sglang the model comes from the env.yaml sglang entry's `model`; otherwise
+# pass MODEL_PATH=... explicitly.
 #
 #   bash eval_only_sglang.sh
+#   MODEL_PATH=/remote/.../DeepSeek-V3.2 bash eval_only_sglang.sh
 #   BACKEND=vllm BASE_URL=http://localhost:8000 bash eval_only_sglang.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +17,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export ENV_YAML="${SCRIPT_DIR}/env.yaml"
 export LOG_ROOT="${SCRIPT_DIR}/logs"
 export DATA_DIR="${SCRIPT_DIR}"
-export SERVE_SGLANG_SH="${SCRIPT_DIR}/serve_sglang_ds3.2.sh"
 
 export AUTO_SERVE=0
 export BACKEND="${BACKEND:-sglang}"
