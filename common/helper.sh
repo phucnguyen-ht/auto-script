@@ -198,6 +198,9 @@ serve_backend() {
         (SGLANG_PORT="${SERVER_PORT}" bash "${SERVE_SGLANG_SH}" "${MODEL_PATH}") >"${log}" 2>&1 &
     else
         echo "[serve] vLLM (preset: ${PRESET_YAML}) -> ${log}"
+        # Snapshot the exact preset served (incl. profiler/eager-injected copies)
+        # beside the serve log so each run records its config.
+        cp -f "${PRESET_YAML}" "$(dirname "${log}")/preset.yaml" 2>/dev/null || true
         (bash "${SERVE_SH}" "${MODEL_PATH}" "${PRESET_YAML}") >"${log}" 2>&1 &
     fi
     echo "[serve] PID: $!"
