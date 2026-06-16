@@ -25,13 +25,17 @@ load_scenarios() {
 
 # one vllm bench serve invocation -> <RUN_DIR>/run<r>/<label>.json
 run_one() {
-    local j="$1" r="$2" prof=()
+    local j="$1" r="$2" prof=() trc=()
     [ "${MODE}" = "profile" ] && prof=(--profile)
+    # Mirror the server's trust_remote_code (from the preset) so the client
+    # tokenizer matches the server's (needed for custom tokenizers, e.g. Kimi).
+    [ "$(yq e '.engine_args.trust_remote_code // false' "${PRESET_YAML}")" = "true" ] && trc=(--trust-remote-code)
     local dir="${RUN_DIR}/run${r}"; mkdir -p "${dir}"
     echo "  scenario ${SC_LABEL[j]}"
     vllm bench serve \
         --backend vllm \
         --model "${MODEL_PATH}" \
+        "${trc[@]}" \
         --base-url "${BASE_URL}" \
         --dataset-name random \
         --random-input-len "${SC_ISL[j]}" \
