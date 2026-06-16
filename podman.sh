@@ -14,7 +14,7 @@ podman run -ti -d \
   --security-opt seccomp=unconfined \
   --cap-add=CAP_SYS_ADMIN --cap-add=SYS_PTRACE \
   --device=/dev/kfd --device=/dev/dri --device=/dev/mem \
-  -v "/shared/amdgpu/home/loc_tran_ce6/share-mv/zai-org:/share-mv/zai-org" \
+  -v "/shared/amdgpu/home/loc_tran_ce6/share-mv:/remote/vast0/share-mv" \
   -v $WORKING_DIR:$WORKING_DIR \
   -w $WORKING_DIR \
   --name "${CONTAINER_NAME}" \
