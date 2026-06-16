@@ -8,6 +8,13 @@ COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METHOD=random
 declare -a SC_ISL SC_OSL SC_CONC SC_NP SC_LABEL
 
+# Reset the prefix cache before each bench run (default on). vLLM only mounts
+# /reset_prefix_cache under dev mode, so enable it before the template serves.
+RESET_PREFIX_CACHE="${RESET_PREFIX_CACHE:-1}"
+if [ "${MODE:-bench}" = "bench" ] && [ "${RESET_PREFIX_CACHE}" != "0" ]; then
+    export VLLM_SERVER_DEV_MODE=1
+fi
+
 # populate SCENARIOS (indices) + parallel per-scenario state from the dict list.
 load_scenarios() {
     local n j
@@ -32,6 +39,7 @@ run_one() {
     [ "$(yq e '.engine_args.trust_remote_code // false' "${PRESET_YAML}")" = "true" ] && trc=(--trust-remote-code)
     local dir="${RUN_DIR}/run${r}"; mkdir -p "${dir}"
     echo "  scenario ${SC_LABEL[j]}"
+    [ "${MODE}" = "bench" ] && is_enabled "${RESET_PREFIX_CACHE}" && reset_prefix_cache
     vllm bench serve \
         --backend vllm \
         --model "${MODEL_PATH}" \

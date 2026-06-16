@@ -215,6 +215,20 @@ kill_server() {
     sleep 15; echo "[kill] Done."
 }
 
+# reset_prefix_cache — best-effort reset of the server's prefix/radix cache.
+#   vllm   -> POST /reset_prefix_cache (server must run with VLLM_SERVER_DEV_MODE=1,
+#             else the route is not mounted; auto_bench exports it before serving)
+#   sglang -> POST /flush_cache
+reset_prefix_cache() {
+    local url="${BASE_URL%/}" ep
+    [ "${BACKEND,,}" = "sglang" ] && ep="/flush_cache" || ep="/reset_prefix_cache"
+    if curl -sf -X POST "${url}${ep}" -o /dev/null; then
+        echo "  [reset_prefix_cache] POST ${url}${ep}"
+    else
+        echo "  [reset_prefix_cache][WARN] POST ${url}${ep} failed" >&2
+    fi
+}
+
 # profiler_config_json <trace_dir> — moreh torch profiler_config (engine arg),
 # reading flags from .profile.config.*. Inject into a preset before serving.
 profiler_config_json() {
