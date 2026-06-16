@@ -23,8 +23,10 @@ auto-script/
 ├── common/                  # REUSABLE, ticket-agnostic
 │   ├── helper.sh            # paths, env merge, serve/kill/wait, resolvers
 │   ├── run_all.sh           # shared driver (readable + eval) with ticket_phases hook
-│   ├── auto_readable.sh             # smoke test via /v1/completions
-│   ├── auto_readable_thinking.sh    # smoke test via /v1/chat/completions
+│   ├── auto_readable_template.sh    # readable serve/kill + shared prompts
+│   ├── auto_readable_{completion,chat,pychat}.sh  # readable methods (concretes)
+│   ├── readable_prompts.txt         # shared smoke-test prompts
+│   ├── readable_pychat.py           # client-side chat-template readable
 │   └── auto_eval.sh         # repobench (generate+eval) + lm_eval, run-count driven
 └── bench_<ticket>/          # ticket-specific
     ├── env.yaml             # OVERRIDES merged on top of ../env.yaml
@@ -76,6 +78,11 @@ gsm8k supports a `method` field: `lm_eval` (default, `local-completions`) or
 `script` — the latter runs `datasets/gsm8k/gsm8k.py` (chat-completions runner
 with a custom task yaml). Example: `gsm8k: { runs: 1, method: script }`.
 
+`eval.readable` filters which readable smoke tests the readable phase runs:
+`completion` (raw /v1/completions), `chat` (/v1/chat/completions), `pychat`
+(chat template applied client-side, then /v1/completions — sidesteps a wrong
+server chat template). Example: `readable: [pychat]`.
+
 ## Run
 
 ```bash
@@ -90,7 +97,7 @@ Run a single phase standalone (it serves/kills its own server):
 
 ```bash
 PRESET_YAML=$PWD/../presets/glm5/dp8ep8/bs64-dg.yaml bash ../common/auto_eval.sh
-AUTO_SERVE=0 BASE_URL=http://localhost:8000 bash ../common/auto_readable.sh
+AUTO_SERVE=0 BASE_URL=http://localhost:8000 bash ../common/auto_readable_chat.sh
 ```
 
 ## Debug (split serve vs downstream)

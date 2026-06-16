@@ -69,9 +69,11 @@ for be in ${BACKENDS_TO_RUN}; do
         case "${ph}" in
             readable)
                 is_enabled "${RUN_READABLE}" || continue
-                rm -rf /root/.cache/vllm/torch_compile_cache/
-                phase readable_thinking bash "${COMMON_DIR}/auto_readable_thinking.sh"
-                phase readable bash "${COMMON_DIR}/auto_readable.sh"
+                # Run only the readable methods enabled in env.yaml .eval.readable.
+                for meth in $(readable_list); do
+                    rm -rf /root/.cache/vllm/torch_compile_cache/
+                    phase "readable:${meth}" bash "${COMMON_DIR}/auto_readable_${meth}.sh"
+                done
                 ;;
             eval)
                 is_enabled "${RUN_EVAL}" || continue

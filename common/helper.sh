@@ -73,6 +73,13 @@ backend_field() {
     yq e ".backends[] | select(.name == \"$1\") | .$2 // \"\"" "${ENV_YAML}" 2>/dev/null | head -n1
 }
 
+# readable_list — readable methods from env.yaml .eval.readable (default: all).
+readable_list() {
+    local r; r="$(yq e '.eval.readable[]' "${ENV_YAML}" 2>/dev/null | tr '\n' ' ')"
+    [ -z "${r// /}" ] && r="completion chat pychat"
+    printf '%s' "$r"
+}
+
 # phases_list — ordered phase names from env.yaml .phases (default: readable eval).
 phases_list() {
     local p; p="$(yq e '.phases[]' "${ENV_YAML}" 2>/dev/null | tr '\n' ' ')"
