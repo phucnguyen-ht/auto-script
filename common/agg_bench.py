@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Build CSV tables from random-dataset `vllm bench serve --save-result` results.
+"""Build CSV tables from `vllm bench serve --save-result` results.
 
-Usage: agg_bench.py <run_dir>
+Usage: agg_bench.py <run_dir> [columns]
+  columns: optional comma-separated metric list (exact order). If given, those
+           columns are emitted verbatim (blank when a value is missing). If
+           omitted, the default rich set below is used (present columns only).
 Reads <run_dir>/run<i>/<scenario>.json and writes:
   <run_dir>/run<i>.csv   # one table per run  (rows = scenarios, cols = metrics)
   <run_dir>/mean.csv     # mean over the runs (rows = scenarios, cols = metrics)
@@ -16,9 +19,10 @@ import statistics
 import sys
 
 run_dir = sys.argv[1]
+COLS_ARG = sys.argv[2].strip() if len(sys.argv) > 2 and sys.argv[2].strip() else ""
 
-# Metric columns (X axis), in display order; only those present are emitted.
-COLS = [
+# Default metric columns (X axis), in display order; only present ones emitted.
+DEFAULT_COLS = [
     "duration", "completed", "total_input_tokens", "total_output_tokens",
     "request_throughput", "output_throughput", "total_token_throughput",
     "mean_ttft_ms", "median_ttft_ms", "p50_ttft_ms", "p90_ttft_ms", "p99_ttft_ms",
@@ -52,11 +56,15 @@ if not runs:
     print(f"[agg] no run*/ result json under {run_dir}")
     sys.exit(0)
 
-present = set()
-for i in runs:
-    for d in runs[i].values():
-        present |= {k for k, v in d.items() if is_num(v)}
-cols = [c for c in COLS if c in present]
+if COLS_ARG:
+    # Explicit columns: emit verbatim, in the given order (blank if missing).
+    cols = [c.strip() for c in COLS_ARG.split(",") if c.strip()]
+else:
+    present = set()
+    for i in runs:
+        for d in runs[i].values():
+            present |= {k for k, v in d.items() if is_num(v)}
+    cols = [c for c in DEFAULT_COLS if c in present]
 
 # scenarios in first-seen order across runs
 scenarios = []
