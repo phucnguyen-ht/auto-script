@@ -3,7 +3,7 @@ CONTAINER_NAME=phuc-nguyen-mv-4476
 SETUP_DEV=${SETUP_DEV:-0}
 
 if [ "$SETUP_DEV" = "1" ] && [ ! -d "$WORKING_DIR/vllm-moreh" ]; then
-  git clone --recursive https://github.com/moreh-dev/vllm-moreh.git "$WORKING_DIR/vllm-moreh"
+  git clone --recursive git@github.com:moreh-dev/vllm-moreh.git "$WORKING_DIR/vllm-moreh"
 fi
 
 docker run -d \
