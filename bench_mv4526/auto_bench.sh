@@ -30,30 +30,21 @@ fi
 declare -a SC_DS SC_OSL SC_CONC SC_RATE SC_NP SC_LABEL
 DATASET_DIR=""
 
-# membership test: _in <value> <list...>
-_in() { local v="$1"; shift; local x; for x in "$@"; do [ "$x" = "$v" ] && return 0; done; return 1; }
-
-# cross-product datasets x rates x concurrencies -> SCENARIOS + state arrays.
-# Per dataset, exclude_concurrencies / exclude_rates drop specific combos.
+# Each dataset lists its own rates x concurrencies -> SCENARIOS + state arrays.
 load_scenarios() {
     local p=".${MODE}.custom" n j ppc floor cap rates concs dname dosl rate cc np idx=0
-    local ex_c ex_r
     DATASET_DIR="$(yaml_get "${p}.dataset_dir")"
     ppc="$(yaml_get "${p}.prompts_per_concurrency" 3)"
     floor="$(yaml_get "${p}.num_prompts_floor" 32)"
     cap="$(yaml_get "${p}.num_prompts_cap" 256)"
-    read -r -a rates <<< "$(yaml_list "${p}.rates")"
-    read -r -a concs <<< "$(yaml_list "${p}.concurrencies")"
     n="$(yq e "${p}.datasets | length" "${ENV_YAML}" 2>/dev/null)"; [[ "${n}" =~ ^[0-9]+$ ]] || n=0
     for (( j=0; j<n; j++ )); do
         dname="$(yq e "${p}.datasets[$j].name" "${ENV_YAML}")"
         dosl="$(yq e "${p}.datasets[$j].osl" "${ENV_YAML}")"
-        read -r -a ex_c <<< "$(yaml_list "${p}.datasets[$j].exclude_concurrencies")"
-        read -r -a ex_r <<< "$(yaml_list "${p}.datasets[$j].exclude_rates")"
+        read -r -a rates <<< "$(yaml_list "${p}.datasets[$j].rates")"
+        read -r -a concs <<< "$(yaml_list "${p}.datasets[$j].concurrencies")"
         for rate in "${rates[@]}"; do
-            _in "${rate}" "${ex_r[@]}" && continue
             for cc in "${concs[@]}"; do
-                _in "${cc}" "${ex_c[@]}" && continue
                 np=$(( cc * ppc )); (( np < floor )) && np="${floor}"; (( np > cap )) && np="${cap}"
                 SC_DS[idx]="${dname}"; SC_OSL[idx]="${dosl}"; SC_CONC[idx]="${cc}"
                 SC_RATE[idx]="${rate}"; SC_NP[idx]="${np}"

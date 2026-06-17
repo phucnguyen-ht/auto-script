@@ -14,6 +14,7 @@ docker run -d \
   -v /remote/vast0/share-mv:/remote/vast0/share-mv \
   -v $WORKING_DIR:$WORKING_DIR \
   -w $WORKING_DIR \
+  -e AITER_MOREH_ROOT_DIR=$WORKING_DIR/vllm-moreh/src/aiter_moreh \
   --name $CONTAINER_NAME \
   --entrypoint bash \
   vllm/vllm-openai-rocm:v0.21.0 \
