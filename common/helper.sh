@@ -239,12 +239,25 @@ reset_prefix_cache() {
 # profiler_config_json <trace_dir> — moreh torch profiler_config (engine arg),
 # reading flags from .profile.config.*. Inject into a preset before serving.
 profiler_config_json() {
-    printf '{"profiler":"torch","torch_profiler_dir":"%s","torch_profiler_with_stack":"%s","torch_profiler_record_shapes":"%s","torch_profiler_with_memory":"%s","torch_profiler_with_flops":"%s"}' \
+    local cfg
+    cfg=$(printf '{"profiler":"torch","torch_profiler_dir":"%s","torch_profiler_with_stack":"%s","torch_profiler_record_shapes":"%s","torch_profiler_with_memory":"%s","torch_profiler_with_flops":"%s"' \
         "$1" \
         "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_STACK' False)" \
         "$(yaml_get '.profile.config.TORCH_PROFILER_RECORD_SHAPES' False)" \
         "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_MEMORY' False)" \
-        "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_FLOPS' False)"
+        "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_FLOPS' False)")
+    # ignore_frontend only matters with data_parallel: then there are N API-server
+    # processes and /start_profile vs /stop_profile get load-balanced to different ones,
+    # so the per-process front-end profiler's stop() hits a process that never started
+    # -> "Profiler must be initialized" 500. Disable it ONLY when dp>1. With dp=1 there
+    # is a single API server, the front-end profiler works fine, so keep it.
+    local dp=1
+    if [ -n "${PRESET_YAML:-}" ] && [ -f "${PRESET_YAML}" ]; then
+        dp="$(yq e '.engine_args.data_parallel_size // 1' "${PRESET_YAML}" 2>/dev/null)"
+    fi
+    [[ "${dp}" =~ ^[0-9]+$ ]] || dp=1
+    (( dp > 1 )) && cfg+=',"ignore_frontend":true'
+    printf '%s}' "${cfg}"
 }
 
 # harvest_profiles <marker_file> <dest_dir> — torch profiler writes every capture
@@ -254,19 +267,29 @@ profiler_config_json() {
 # invocation (its mtime delimits "new" files). Waits for the async trace flush that
 # happens on /stop_profile. No-op outside profile mode or when PROFILER_DIR is unset.
 harvest_profiles() {
-    local marker="$1" dest="$2" tries=0
+    local marker="$1" dest="$2" t=0 stable=0 prev=-1 cur
     [ "${MODE:-bench}" = "profile" ] || return 0
     [ -n "${PROFILER_DIR:-}" ] && [ -d "${PROFILER_DIR}" ] || return 0
-    # wait up to ~60s for at least one new trace to be flushed to disk
-    while (( tries < 120 )); do
-        find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" \
-            -name '*.pt.trace.json.gz' 2>/dev/null | grep -q . && break
-        sleep 0.5; tries=$(( tries + 1 ))
+    # Per-rank trace files flush asynchronously after /stop_profile, a few at a time.
+    # Wait until the new-trace count STOPS GROWING (settles) before moving -- moving on
+    # the first sighting would split one capture across folders. Bail early if nothing
+    # shows up at all (e.g. stop_profile failed -> no trace for this scenario).
+    while (( t < 120 )); do                       # 120 * 0.5s = 60s hard cap
+        cur=$(find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" \
+              -name '*.pt.trace.json.gz' 2>/dev/null | wc -l)
+        if (( cur == 0 )); then
+            (( t >= 30 )) && break                # ~15s grace, still nothing -> give up
+        elif (( cur == prev )); then
+            (( ++stable >= 6 )) && break          # ~3s with no new file -> settled
+        else
+            stable=0
+        fi
+        prev=${cur}; sleep 0.5; (( t++ ))
     done
     local -a new
     mapfile -t new < <(find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" \
         \( -name '*.pt.trace.json.gz' -o -name 'profiler_out_*.txt' \) 2>/dev/null)
-    (( ${#new[@]} )) || { echo "  [profile] no new trace for ${dest##*/}" >&2; return 0; }
+    (( ${#new[@]} )) || { echo "  [profile] no trace captured for ${dest##*/} (stop_profile may have failed)" >&2; return 0; }
     mkdir -p "${dest}"
     mv -t "${dest}" "${new[@]}"
     echo "  [profile] ${#new[@]} artifact(s) -> ${dest#"${RUN_DIR}/"}"
