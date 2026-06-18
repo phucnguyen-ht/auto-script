@@ -40,6 +40,7 @@ run_one() {
     local dir="${RUN_DIR}/run${r}"; mkdir -p "${dir}"
     echo "  scenario ${SC_LABEL[j]}"
     [ "${MODE}" = "bench" ] && is_enabled "${RESET_PREFIX_CACHE}" && reset_prefix_cache
+    local marker=""; [ "${MODE}" = "profile" ] && marker="$(mktemp)"
     vllm bench serve \
         --backend vllm \
         --model "${MODEL_PATH}" \
@@ -56,6 +57,12 @@ run_one() {
         --metric-percentiles 50,90,99 \
         --save-result --result-dir "${dir}" --result-filename "${SC_LABEL[j]}.json" \
         2>&1 | tee "${dir}/${SC_LABEL[j]}.log"
+    # profile: move this scenario's freshly-written traces into run<r>/<label> so
+    # each capture is traceable (torch profiler dumps every capture into one dir).
+    if [ -n "${marker}" ]; then
+        [ -n "${PROFILER_DIR:-}" ] && harvest_profiles "${marker}" "${PROFILER_DIR}/run${r}/${SC_LABEL[j]}"
+        rm -f "${marker}"
+    fi
 }
 
 # build run<i>.csv (scenario x metric) per run + mean.csv/std.csv across runs.

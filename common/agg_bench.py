@@ -20,6 +20,10 @@ import sys
 
 run_dir = sys.argv[1]
 COLS_ARG = sys.argv[2].strip() if len(sys.argv) > 2 and sys.argv[2].strip() else ""
+# Optional argv[3]: ";"-separated regexes (one capture group each), highest sort
+# priority first. Empty -> generic natural sort. Keeps per-ticket scenario naming
+# out of this shared script.
+SORT_ARG = sys.argv[3].strip() if len(sys.argv) > 3 and sys.argv[3].strip() else ""
 
 # Default metric columns (X axis), in display order; only present ones emitted.
 DEFAULT_COLS = [
@@ -66,12 +70,44 @@ else:
             present |= {k for k, v in d.items() if is_num(v)}
     cols = [c for c in DEFAULT_COLS if c in present]
 
-# scenarios in first-seen order across runs
+# all scenarios across runs, sorted by X(k) -> concurrency(c) -> request_rate(r)
 scenarios = []
 for i in sorted(runs):
     for scen in runs[i]:
         if scen not in scenarios:
             scenarios.append(scen)
+
+
+def _natkey(s):
+    # Generic natural sort: number / text runs so numerics sort by value
+    # (8 < 10 < 100); text sorts after numbers. Ticket-agnostic.
+    return [
+        (0, float(tok)) if re.fullmatch(r"\d+(?:\.\d+)?", tok) else (1, tok)
+        for tok in re.findall(r"\d+(?:\.\d+)?|\D+", s)
+    ]
+
+
+def _field(pat, scen):
+    m = re.search(pat, scen)
+    if not m or m.group(1) is None:
+        return (2, float("inf"))  # field absent -> sort last
+    v = m.group(1)
+    return (0, float(v)) if re.fullmatch(r"\d+(?:\.\d+)?", v) else (1, v)
+
+
+if SORT_ARG:
+    # Caller-supplied field priority (ticket-specific naming lives in the caller,
+    # NOT here): ";"-separated regexes, each with one capture group, highest
+    # priority first. Natural sort breaks ties / handles unmatched labels.
+    _pats = [p for p in SORT_ARG.split(";") if p]
+
+    def scen_key(scen):
+        return [_field(p, scen) for p in _pats] + [_natkey(scen)]
+else:
+    scen_key = _natkey
+
+
+scenarios.sort(key=scen_key)
 
 
 def write_table(path, cell):

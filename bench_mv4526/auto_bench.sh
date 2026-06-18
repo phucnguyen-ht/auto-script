@@ -120,12 +120,22 @@ run_one() {
     is_enabled "${SKIP_CHAT_TEMPLATE}" && args+=(--skip-chat-template)
     is_enabled "${IGNORE_EOS}" && args+=(--ignore-eos)
     [ "${MODE}" = "bench" ] && is_enabled "${RESET_PREFIX_CACHE}" && reset_prefix_cache
+    local marker=""; [ "${MODE}" = "profile" ] && marker="$(mktemp)"
     "${args[@]}" 2>&1 | tee "${dir}/${label}.log"
+    # profile: move this scenario's freshly-written traces into a per-run/per-scenario
+    # folder so each capture is traceable (torch profiler dumps them all into one dir).
+    if [ -n "${marker}" ]; then
+        [ -n "${PROFILER_DIR:-}" ] && harvest_profiles "${marker}" "${PROFILER_DIR}/run${r}/${label}"
+        rm -f "${marker}"
+    fi
 }
 
 # build run<i>.csv (scenario x metric) per run + mean.csv/std.csv across runs.
 # Extract exactly the reference script's metrics, in its order.
 AGG_COLS="mean_ttft_ms,p90_ttft_ms,mean_tpot_ms,p90_tpot_ms,request_throughput,output_throughput,completed"
-aggregate() { python3 "${COMMON_DIR}/agg_bench.py" "${RUN_DIR}" "${AGG_COLS}" 2>&1 | tee "${RUN_DIR}/agg.log"; }
+# Scenario labels are "<X>k_r<r>_c<c>". Sort priority: request_rate -> ISL(k) ->
+# concurrency (so all r1 come first, r2 grouped at the very end).
+AGG_SORT='r(\d+);(\d+)k;c(\d+)'
+aggregate() { python3 "${COMMON_DIR}/agg_bench.py" "${RUN_DIR}" "${AGG_COLS}" "${AGG_SORT}" 2>&1 | tee "${RUN_DIR}/agg.log"; }
 
 source "${COMMON_DIR}/auto_bench_template.sh"

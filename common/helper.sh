@@ -247,6 +247,31 @@ profiler_config_json() {
         "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_FLOPS' False)"
 }
 
+# harvest_profiles <marker_file> <dest_dir> — torch profiler writes every capture
+# to one fixed dir (set at server start), so scenarios/runs mix together. Call this
+# right after a profiled bench invocation to move that scenario's freshly-written
+# artifacts into <dest>. <marker_file> must be a file created just BEFORE the
+# invocation (its mtime delimits "new" files). Waits for the async trace flush that
+# happens on /stop_profile. No-op outside profile mode or when PROFILER_DIR is unset.
+harvest_profiles() {
+    local marker="$1" dest="$2" tries=0
+    [ "${MODE:-bench}" = "profile" ] || return 0
+    [ -n "${PROFILER_DIR:-}" ] && [ -d "${PROFILER_DIR}" ] || return 0
+    # wait up to ~60s for at least one new trace to be flushed to disk
+    while (( tries < 120 )); do
+        find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" \
+            -name '*.pt.trace.json.gz' 2>/dev/null | grep -q . && break
+        sleep 0.5; tries=$(( tries + 1 ))
+    done
+    local -a new
+    mapfile -t new < <(find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" \
+        \( -name '*.pt.trace.json.gz' -o -name 'profiler_out_*.txt' \) 2>/dev/null)
+    (( ${#new[@]} )) || { echo "  [profile] no new trace for ${dest##*/}" >&2; return 0; }
+    mkdir -p "${dest}"
+    mv -t "${dest}" "${new[@]}"
+    echo "  [profile] ${#new[@]} artifact(s) -> ${dest#"${RUN_DIR}/"}"
+}
+
 # serve_backend <log> — start the backend in the background. vllm uses
 # PRESET_YAML; sglang uses serve_sglang_ds3.2.sh.
 serve_backend() {
