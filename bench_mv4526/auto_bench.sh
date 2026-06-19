@@ -20,6 +20,7 @@ METRIC_PERCENTILES="${METRIC_PERCENTILES:-50,90,99}"  # more percentiles = bette
 SKIP_CHAT_TEMPLATE="${SKIP_CHAT_TEMPLATE:-1}"  # longbench prompts are pre-templated
 IGNORE_EOS="${IGNORE_EOS:-1}"                  # force full OSL for comparable lengths
 TRUST_REMOTE_CODE="${TRUST_REMOTE_CODE:-0}"    # 0 -> never; else mirror preset's trust_remote_code
+SAVE_DETAILED="${SAVE_DETAILED:-0}"            # 1 -> --save-detailed (per-request/per-token ITL,TTFT in json; bigger files)
 
 # Reset prefix cache before each bench run (vllm needs dev mode for the endpoint).
 RESET_PREFIX_CACHE="${RESET_PREFIX_CACHE:-1}"
@@ -119,6 +120,7 @@ run_one() {
     )
     is_enabled "${SKIP_CHAT_TEMPLATE}" && args+=(--skip-chat-template)
     is_enabled "${IGNORE_EOS}" && args+=(--ignore-eos)
+    is_enabled "${SAVE_DETAILED}" && args+=(--save-detailed)
     [ "${MODE}" = "bench" ] && is_enabled "${RESET_PREFIX_CACHE}" && reset_prefix_cache
     local marker=""; [ "${MODE}" = "profile" ] && marker="$(mktemp)"
     "${args[@]}" 2>&1 | tee "${dir}/${label}.log"
