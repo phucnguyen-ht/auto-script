@@ -1,0 +1,1 @@
+../bench_mv4526/auto_profile.sh
