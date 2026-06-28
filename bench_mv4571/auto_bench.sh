@@ -133,6 +133,7 @@ run_one() {
         --metric-percentiles "${METRIC_PERCENTILES}"
         --metadata isl="${ds}" osl="${osl}" conc="${conc}" num_prompts="${np}" request_rate="${rate}"
         --save-result --result-dir "${dir}" --result-filename "${label}.json"
+        --temperature 0
         --seed 0 "${prof[@]}"
     )
     is_enabled "${SKIP_CHAT_TEMPLATE}" && args+=(--skip-chat-template)

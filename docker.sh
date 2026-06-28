@@ -1,6 +1,6 @@
 WORKING_DIR=/home/phuc-nguyen/workspaces/mv-4571
 CONTAINER_NAME=phuc-nguyen-mv-4571
-SETUP_DEV=${SETUP_DEV:-1}
+SETUP_DEV=${SETUP_DEV:-0}
 
 if [ "$SETUP_DEV" = "1" ] && [ ! -d "$WORKING_DIR/vllm-moreh" ]; then
   git clone --recursive git@github.com:moreh-dev/vllm-moreh.git "$WORKING_DIR/vllm-moreh"

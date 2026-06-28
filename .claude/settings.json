@@ -4,7 +4,8 @@
       "Bash",
       "Edit",
       "Write",
-      "Read"
+      "Read",
+      "python3"
     ],
     "deny": []
   }

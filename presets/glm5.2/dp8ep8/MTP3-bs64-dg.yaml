@@ -12,7 +12,7 @@ env_vars:
   VLLM_USE_V2_MODEL_RUNNER: '1'
   VLLM_MOREH_IS_DECODE_WORKER: both
   VLLM_MOREH_USE_AITER_PREFILL_FAST: '1'
-  VLLM_ENGINE_READY_TIMEOUT_S: '3600'
+  VLLM_ENGINE_READY_TIMEOUT_S: '36000'
 parallelism_args:
   tensor_parallel_size: 1
   data_parallel_size: 8

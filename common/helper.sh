@@ -170,6 +170,11 @@ resolve_preset() {
 # variant under <LOG_ROOT>_sglang) and creates it.
 setup_run_dir() {
     local phase="$1" base
+    # Cho phép tái dùng 1 RUN_DIR có sẵn (vd serve_profile.sh đã tạo) để serve +
+    # bench/profile cùng ghi vào MỘT folder. Bỏ trống -> hành vi mặc định (tạo mới).
+    if [ -n "${RUN_DIR_OVERRIDE:-}" ]; then
+        RUN_DIR="${RUN_DIR_OVERRIDE}"; mkdir -p "${RUN_DIR}"; return 0
+    fi
     if [ "${BACKEND,,}" = "sglang" ]; then
         base="${LOG_ROOT}_sglang/${phase}"
     else
@@ -199,7 +204,7 @@ wait_for_gpu_free() {
 }
 
 wait_for_server() {
-    local max_wait="${SERVER_WAIT_TIMEOUT:-3600}" elapsed=0
+    local max_wait="${SERVER_WAIT_TIMEOUT:-7200}" elapsed=0
     echo "[wait] Polling ${BASE_URL}/health (timeout: ${max_wait}s)..."
     while ! curl -sf "${BASE_URL}/health" >/dev/null 2>&1; do
         sleep 10; elapsed=$((elapsed + 10))
@@ -253,7 +258,8 @@ profiler_config_json() {
     # is a single API server, the front-end profiler works fine, so keep it.
     local dp=1
     if [ -n "${PRESET_YAML:-}" ] && [ -f "${PRESET_YAML}" ]; then
-        dp="$(yq e '.engine_args.data_parallel_size // 1' "${PRESET_YAML}" 2>/dev/null)"
+        # data_parallel_size lives under parallelism_args in these presets (fallback engine_args).
+        dp="$(yq e '(.parallelism_args.data_parallel_size // .engine_args.data_parallel_size) // 1' "${PRESET_YAML}" 2>/dev/null)"
     fi
     [[ "${dp}" =~ ^[0-9]+$ ]] || dp=1
     (( dp > 1 )) && cfg+=',"ignore_frontend":true'
