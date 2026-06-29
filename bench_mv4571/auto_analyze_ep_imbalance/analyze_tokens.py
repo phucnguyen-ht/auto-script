@@ -8,7 +8,8 @@
 #
 # Dùng:
 #   python3 analyze_tokens.py --log <serve.log|glob> --out <dir> \
-#       [--decode-max-tokens 72] [--concurrency 8] [--layers all|3,8,40]
+#       --concurrency 8 [--decode-max-tokens 4xconc|auto|<số>] [--layers all|3,8,40]
+#   (mặc định ngưỡng chia phase = 4*concurrency)
 #
 # Tương ứng notebook:
 #   CELL 3  -> parse_and_aggregate()           (parse + aggregate qua rank)
@@ -358,10 +359,12 @@ def main():
     ap = argparse.ArgumentParser(description="MV-4571 EP imbalance theo #token (headless).")
     ap.add_argument("--log", required=True, help="serve.log path hoặc glob (lấy file mới nhất nếu glob).")
     ap.add_argument("--out", required=True, help="thư mục lưu kết quả.")
-    ap.add_argument("--decode-max-tokens", default="auto",
-                    help="'auto' (mặc định, tự dò khe lưỡng cực) hoặc 1 số: step có "
-                         "num_tokens(global) <= ngưỡng => decode; else prefill_mixed.")
-    ap.add_argument("--concurrency", type=int, default=8, help="(chỉ để nhãn).")
+    ap.add_argument("--decode-max-tokens", default="4xconc",
+                    help="ngưỡng chia phase: step có num_tokens(global) <= ngưỡng => decode, else "
+                         "prefill_mixed. '4xconc' (mặc định) = 4*concurrency; 'auto' = tự dò khe "
+                         "lưỡng cực; hoặc 1 số cụ thể.")
+    ap.add_argument("--concurrency", type=int, default=8,
+                    help="số request đồng thời (driving '4xconc': ngưỡng decode = 4*concurrency).")
     ap.add_argument("--layers", default="all",
                     help="'all' (mặc định) hoặc list layer cho per-layer-load, vd '3,8,40,41'.")
     args = ap.parse_args()
@@ -375,7 +378,18 @@ def main():
     agg, agg_ranks, agg_ntok, R, E, topk, moe_layers = parse_and_aggregate(log_path)
     print(f"TOPK(inferred)={topk}  EXPERTS_PER_RANK={E // R}  groups={len(agg)}")
 
-    dmt = None if str(args.decode_max_tokens).strip().lower() == "auto" else float(args.decode_max_tokens)
+    # Ngưỡng chia decode/prefill: mặc định 4*concurrency (theo yêu cầu ticket); 'auto' = tự dò;
+    # hoặc 1 số cụ thể. (decode num_tokens ~ #seq đang chạy ~ conc, nên 4*conc tách an toàn.)
+    _dmt = str(args.decode_max_tokens).strip().lower()
+    if _dmt == "auto":
+        dmt = None
+    elif _dmt in ("4xconc", "4*conc", "conc4", ""):
+        dmt = 4 * args.concurrency
+    else:
+        dmt = float(args.decode_max_tokens)
+    print(f"decode-threshold source = {args.decode_max_tokens!r} "
+          f"(concurrency={args.concurrency}) -> "
+          f"{'auto-detect' if dmt is None else f'{dmt:g} tokens'}")
     steps_df, expert_dist_global = build_steps_df(agg, agg_ranks, R, E, topk, dmt)
     expert_dist_by_layer = build_expert_dist_by_layer(agg, agg_ranks, R, E)
 

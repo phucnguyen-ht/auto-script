@@ -251,18 +251,17 @@ profiler_config_json() {
         "$(yaml_get '.profile.config.TORCH_PROFILER_RECORD_SHAPES' False)" \
         "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_MEMORY' False)" \
         "$(yaml_get '.profile.config.TORCH_PROFILER_WITH_FLOPS' False)")
-    # ignore_frontend only matters with data_parallel: then there are N API-server
-    # processes and /start_profile vs /stop_profile get load-balanced to different ones,
-    # so the per-process front-end profiler's stop() hits a process that never started
-    # -> "Profiler must be initialized" 500. Disable it ONLY when dp>1. With dp=1 there
-    # is a single API server, the front-end profiler works fine, so keep it.
-    local dp=1
-    if [ -n "${PRESET_YAML:-}" ] && [ -f "${PRESET_YAML}" ]; then
-        # data_parallel_size lives under parallelism_args in these presets (fallback engine_args).
-        dp="$(yq e '(.parallelism_args.data_parallel_size // .engine_args.data_parallel_size) // 1' "${PRESET_YAML}" 2>/dev/null)"
-    fi
-    [[ "${dp}" =~ ^[0-9]+$ ]] || dp=1
-    (( dp > 1 )) && cfg+=',"ignore_frontend":true'
+    # We do NOT inject "ignore_frontend":true by default. With data_parallel + multiple
+    # API servers, /start_profile and /stop_profile are load-balanced to different
+    # front-ends, so the per-process front-end profiler's stop() raises a harmless
+    # "Profiler must be initialized" 500. That 500 does NOT prevent the per-rank GPU
+    # traces from being written -- and ignore_frontend does NOT prevent the (separate)
+    # post-stop DP deadlock either -- so suppressing it only hides a cosmetic error
+    # while changing the served config away from the real preset. The reliable fix is
+    # to harvest by POLLING the trace dir (harvest_profiles) and kill the wedged client,
+    # not to touch the preset. Set PROFILE_IGNORE_FRONTEND=1 to opt into the quiet
+    # behavior (no front-end CPU trace, no 500).
+    is_enabled "${PROFILE_IGNORE_FRONTEND:-0}" && cfg+=',"ignore_frontend":true'
     printf '%s}' "${cfg}"
 }
 
@@ -273,24 +272,39 @@ profiler_config_json() {
 # invocation (its mtime delimits "new" files). Waits for the async trace flush that
 # happens on /stop_profile. No-op outside profile mode or when PROFILER_DIR is unset.
 harvest_profiles() {
-    local marker="$1" dest="$2" t=0 stable=0 prev=-1 cur
+    local marker="$1" dest="$2"
     [ "${MODE:-bench}" = "profile" ] || return 0
     [ -n "${PROFILER_DIR:-}" ] && [ -d "${PROFILER_DIR}" ] || return 0
-    # Per-rank trace files flush asynchronously after /stop_profile, a few at a time.
-    # Wait until the new-trace count STOPS GROWING (settles) before moving -- moving on
-    # the first sighting would split one capture across folders. Bail early if nothing
-    # shows up at all (e.g. stop_profile failed -> no trace for this scenario).
-    while (( t < 120 )); do                       # 120 * 0.5s = 60s hard cap
-        cur=$(find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" \
-              -name '*.pt.trace.json.gz' 2>/dev/null | wc -l)
-        if (( cur == 0 )); then
-            (( t >= 30 )) && break                # ~15s grace, still nothing -> give up
-        elif (( cur == prev )); then
-            (( ++stable >= 6 )) && break          # ~3s with no new file -> settled
+    # Per-rank trace files flush asynchronously AFTER /stop_profile. The export can take
+    # MANY MINUTES for a large profiling window (a 4-min eager window -> ~645MB per rank,
+    # ~8 min to write), and under DP + multiple API servers the bench client can WEDGE on
+    # /stop_profile while the workers still write traces. So we POLL the dir instead of
+    # assuming the client returned:
+    #   phase 1: wait (up to TRACE_APPEAR_TIMEOUT) for the first *.pt.trace.json.gz;
+    #   phase 2: wait until BOTH the file count AND total bytes stop changing (fully
+    #            flushed) -- count-only "settle" would move/truncate a file mid-write.
+    local appear_to="${TRACE_APPEAR_TIMEOUT:-900}" settle_s="${TRACE_SETTLE_S:-10}"
+    local t cur=0 cursize prevcnt=-1 prevsize=-1 stable=0
+    local find_gz=(find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" -name '*.pt.trace.json.gz')
+    for (( t=0; t<appear_to; t+=2 )); do
+        cur=$("${find_gz[@]}" 2>/dev/null | wc -l)
+        (( cur > 0 )) && break
+        sleep 2
+    done
+    if (( cur == 0 )); then
+        echo "  [profile] no trace captured for ${dest##*/} after ${appear_to}s (stop_profile may have failed)" >&2
+        return 0
+    fi
+    for (( t=0; t<appear_to; t+=2 )); do
+        cur=$("${find_gz[@]}" 2>/dev/null | wc -l)
+        # printf %.0f (NOT print s+0): big sums else print in sci-notation -> (( )) errors.
+        cursize=$("${find_gz[@]}" -printf '%s\n' 2>/dev/null | awk '{s+=$1} END{printf "%.0f", s+0}')
+        if (( cur == prevcnt && cursize == prevsize )); then
+            (( (++stable) * 2 >= settle_s )) && break   # count+size unchanged for settle_s
         else
             stable=0
         fi
-        prev=${cur}; sleep 0.5; (( t++ ))
+        prevcnt=${cur}; prevsize=${cursize}; sleep 2
     done
     local -a new
     mapfile -t new < <(find "${PROFILER_DIR}" -maxdepth 1 -type f -newer "${marker}" \

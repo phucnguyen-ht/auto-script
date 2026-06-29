@@ -54,24 +54,38 @@ TRACE_WAIT_TIMEOUT=600, EXPECT_RANKS=8, API_SERVER_COUNT_PROFILE=1`.
 
 ---
 
-## 3. FIX GỐC: "auto_profile chạy xong KHÔNG sinh trace" (user nhấn mạnh)
-- **Nguyên nhân thật**: dp8 → `api_server_count` mặc định = data_parallel_size_local = 8
-  (`bench_mv4571/3rdparty/vllm/entrypoints/cli/serve.py:105-109`). `vllm bench serve --profile`
-  gửi `/start_profile` rồi `/stop_profile`, bị **load-balance sang 2 frontend KHÁC nhau** →
-  start/stop rơi vào engine khác → worker không nhận đủ cặp start+stop → **trace không được ghi**
-  (lúc có lúc không — đúng ca user gặp dù đã tắt ignore_frontend).
-- Cơ chế: worker ghi trace trong `profiler.stop()` (`gpu_worker.py:899-950`), trigger qua
-  `engine_core.profile(False)` ← `async_llm.stop_profile` (`v1/engine/async_llm.py:911-915`).
-  Frontend profiler chỉ tồn tại khi `ignore_frontend=False` (`async_llm.py:178-200`); nó là
-  nguồn 500 "Profiler must be initialized" nhưng KHÔNG phải nguyên nhân thiếu trace.
-- **FIX**: ép `api_server_count=1` (patch_time_preset) → 1 frontend nhận CẢ start+stop →
-  broadcast nhất quán 8 DP engine → 8 trace tin cậy + sạch (no 500). User chọn "giữ frontend ON";
-  với count=1 thì frontend ON cũng start/stop cùng process nên sạch luôn.
-- **Bồi thêm**: `wait_for_traces()` chờ đủ 8 file `dp*_rank0.*.pt.trace.json.gz` (flush bất đồng bộ
-  sau /stop) ổn định RỒI MỚI kill server (bản auto_profile cũ kill ngay → mất trace).
-- **Cổng GPU ban đầu** (theo yêu cầu user): trước vòng lặp, nếu GPU bận thì ĐỢI & retry mỗi 30s
-  (`wait_for_gpu_free`, GPU_POLL_INTERVAL=30) → KHÔNG kill nhầm server người khác; sau cổng GPU rảnh
-  nên kill_server per-phase chỉ là no-op.
+## 3. FIX GỐC: "auto_profile chạy xong KHÔNG sinh trace / server chết" — ĐÃ XÁC NHẬN TRÊN GPU (2026-06-28)
+- **Nguyên nhân THẬT (đã chạy & quan sát):** dp8 → `api_server_count` mặc định = data_parallel_size_local = 8
+  (serve.py:105-109). `vllm bench serve --profile` gửi `/start_profile` rồi `/stop_profile` qua socket
+  SO_REUSEPORT nên rơi vào 2 ApiServer KHÁC nhau. **8 file trace VẪN được worker ghi đầy đủ** (mỗi
+  rank ~645MB cho eager / ~95MB cho cudagraph). NHƯNG ngay sau đó các DP EngineCore **DEADLOCK/LIVELOCK**:
+  `/stop_profile` không bao giờ trả về 200, worker spin ~100% CPU, serve.log spam "No available shared
+  memory broadcast block found in 60 seconds". ⇒ `vllm bench` TREO vĩnh viễn → bản cũ block vào bench
+  nên KHÔNG bao giờ harvest/kill → nhìn như "không có trace / server chết".
+- Lưu ý: `call_utility_async("profile")` broadcast tới TẤT CẢ engine (core_client.py:1428) nên 1 start
+  + 1 stop là ĐỦ để ghi cả 8 trace. Giải thích cũ "start/stop lệch engine → thiếu cặp" là SAI.
+  Export trace RẤT CHẬM: `profiler.stop()` mỗi rank mất vài phút (cửa sổ eager 4 phút → ~8 phút flush).
+- **FIX (đúng ý user: KHÔNG đụng preset, kệ deadlock/assertion, trace bắt buộc có):** chạy bench Ở NỀN,
+  POLL thư mục trace tới khi đủ N file VÀ tổng bytes đứng yên (đã flush xong) RỒI kill cả bench treo lẫn
+  server. KHÔNG ép `api_server_count=1`, KHÔNG thêm `ignore_frontend` (giữ preset nguyên si).
+  - `common/helper.sh::harvest_profiles` — chờ `TRACE_APPEAR_TIMEOUT` (900s) cho trace đầu, rồi settle
+    theo count+bytes (size-aware → không move file 645MB đang ghi dở).
+  - `common/helper.sh::profiler_config_json` — KHÔNG inject `ignore_frontend` mặc định (opt-in `PROFILE_IGNORE_FRONTEND=1`).
+  - `bench_mv4571/auto_bench.sh::run_one` — profile mode chạy bench nền + harvest poll + kill bench treo.
+  - orchestrator: `patch_time_preset` KHÔNG ép `api_server_count` (opt-in `API_SERVER_COUNT_PROFILE=1`);
+    `do_time_phase` chạy bench nền → `wait_for_traces` (size-aware) → kill; `TRACE_WAIT_TIMEOUT` mặc định 900s.
+- **2 workaround cũ vẫn còn dưới dạng OPT-IN** (nếu muốn log sạch, không deadlock): `API_SERVER_COUNT_PROFILE=1`
+  (start+stop về 1 frontend) và/hoặc `PROFILE_IGNORE_FRONTEND=1` (tắt frontend profiler → no 500).
+- **Cổng GPU ban đầu** (giữ nguyên): nếu GPU bận thì ĐỢI & retry mỗi 30s (`wait_for_gpu_free`, GPU_POLL_INTERVAL=30).
+
+### 3b. ENV REGRESSIONS trong container build mới (phải fix để chạy được)
+- `AITER_MOREH_ROOT_DIR` trỏ vào dev checkout không tồn tại → mọi EngineCore chết lúc startup
+  (thiếu `a8w8_bpreshuffle_tuned_gemm_bruteforce.csv`). **ĐÃ FIX** bằng guard trong `serve.sh`
+  (fallback về package `aiter_moreh` đã cài).
+- `matplotlib` chưa cài → analyze_*.py lỗi import. `pip install matplotlib` (đã cài).
+- Patch `[EP_COLLECT]` trong installed vllm `fp8.py` KHÔNG có (nó nằm ở dev checkout đã mất) → phase
+  TOKEN báo "No [EP_COLLECT] lines found". **ĐÃ FIX**: `apply_ep_collect_patch.py` (idempotent, có .bak);
+  orchestrator tự chạy preflight khi PHASES có token.
 
 ---
 
@@ -88,12 +102,16 @@ Chạy trong docker `phuc-nguyen-mv-4571` (host không có numpy):
 ---
 
 ## 5. PENDING (việc còn lại)
-1. **Smoke-test 1 case trên GPU** — đang chặn: lúc kiểm tra, 8 GPU đều 97-98% VRAM (2 bộ VLLM worker
-   đang chạy của process khác). Script đã có cổng đợi-30s nên chạy được an toàn (sẽ tự đợi). Chờ GPU rảnh
-   rồi chạy lệnh ở mục 0.
-2. Sau smoke-test OK → chạy full sweep MV-4571; bật kimi cases (uncomment) cho MV-4572 khi sẵn sàng.
-3. (Tùy chọn) kiểm tra trace dưới cudagraph (enforce_eager=false) parse có ra cụm chuẩn như eager không
-   — run validate cũ là cấu hình enforce_eager đã COMMENT (cudagraph) và OK, nên kỳ vọng ổn.
+- ✅ **Smoke-test 1 case (8k/conc8) trên GPU — XONG (2026-06-28), cả 2 phase OK:**
+  - TIME (cudagraph): 8/8 trace bắt được DÙ /stop_profile deadlock; `analyze_time` → headroom **20.71%**,
+    maxmin_mean 1.706, clusters 77325 — KHỚP reference (TRACE_TIME_ANALYSIS.md ~21.7% / 1.73).
+  - TOKEN (eager): **1.235M** dòng [EP_COLLECT]; R=8 E=256 75 layer; **525 prefill / 153675 decode** steps,
+    auto-threshold 338.8, decode imbalance mean ~4.4, e2e rank max/min 1.038 — KHỚP reference.
+  - `auto_profile.sh` (đường run_all) cũng đã verify: harvest đủ 8 eager trace, KHÔNG treo.
+1. Chạy FULL sweep MV-4571 (bỏ `ONLY`): `bash auto_analyze_ep_imbalance.sh` (token+time, 30 tổ hợp/preset).
+   Lưu ý GPU/thời gian: mỗi (rate,conc) serve 2 lần; export trace eager ~8 phút/lần.
+2. Bật kimi cases (uncomment scenario.yaml) cho MV-4572 khi sẵn sàng.
+3. Nếu container bị tạo lại: chạy lại `apply_ep_collect_patch.py` + `pip install matplotlib` (xem §3b).
 
 ---
 

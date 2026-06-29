@@ -9,23 +9,24 @@ set -uo pipefail
 #            -> serve -> bench (drive forward) -> serve.log đầy [EP_COLLECT]
 #            -> analyze_tokens.py  (hist max/min, phân phối tải, per-layer...).
 #
-#   [TIME]   preset: BỎ enforce_eager (cudagraph FULL_DECODE_ONLY), EP_LOG='0',
-#            inject profiler_config (torch), ÉP api_server_count=1.
-#            -> serve -> bench --profile -> đợi 8 trace -> analyze_time.py.
+#   [TIME]   preset: enforce_eager=false (cudagraph -> timing thực) + EP_LOG='0' + inject
+#            profiler_config (torch). KHÔNG ép api_server_count (mặc định = dp).
+#            -> serve -> bench --profile (NỀN) -> wait_for_traces -> kill -> analyze_time.py.
 #
-# Vì sao tách 2 lần serve: token cần eager (để side-effect log [EP_COLLECT] chạy);
-# time cần cudagraph (timing thực tế) — không thể cùng 1 server. Mỗi case cũng
-# serve lại từ đầu để data sạch (không dồn vào 1 server chạy hết sweep).
+# Vì sao tách 2 lần serve: token cần eager (để side-effect log [EP_COLLECT] chạy); time chỉ cần
+# tắt EP_LOG (tránh overhead log) + bật profiler — không thể cùng 1 server. Mỗi case cũng serve
+# lại từ đầu để data sạch (không dồn vào 1 server chạy hết sweep).
 #
-# FIX GỐC cho auto_profile.sh cũ (chạy xong KHÔNG có trace, không ổn định):
-#   Nguyên nhân: dp8 -> api_server_count mặc định = dp = 8 (serve.py:105-109).
-#   `vllm bench serve --profile` gửi /start_profile rồi /stop_profile, bị load-
-#   balance sang 2 frontend KHÁC nhau -> start/stop rơi vào engine khác nhau ->
-#   worker không nhận đủ cặp start+stop -> trace KHÔNG được ghi (lúc có lúc không).
-#   Cách sửa: ÉP api_server_count=1 (patch_time_preset) -> 1 frontend nhận cả
-#   start lẫn stop, broadcast nhất quán tới 8 DP engine -> 8 trace tin cậy & sạch.
-#   Bồi thêm: CHỜ đủ 8 file dp*_rank0.*.pt.trace.json.gz (flush bất đồng bộ sau
-#   /stop_profile) RỒI MỚI kill server (KHÔNG kill ngay sau bench như bản cũ).
+# FIX GỐC "auto_profile chạy xong KHÔNG có trace / server treo" (KHÔNG sửa preset):
+#   Nguyên nhân THẬT (đã xác nhận trên GPU): dp8 -> api_server_count mặc định = dp = 8
+#   (serve.py:105-109). `vllm bench serve --profile` gửi /start_profile rồi /stop_profile
+#   qua SO_REUSEPORT nên rơi vào 2 frontend KHÁC nhau. 8 file trace VẪN được worker ghi
+#   ra trace_dir, NHƯNG sau đó các DP engine DEADLOCK (/stop_profile không trả về, worker
+#   spin 100% CPU) -> `vllm bench` TREO mãi -> bản cũ block vào bench nên không bao giờ
+#   harvest/kill được -> nhìn như "không có trace / server chết".
+#   Cách sửa (đúng ý: KHÔNG đụng preset, mặc kệ deadlock): chạy bench Ở NỀN, POLL trace_dir
+#   tới khi đủ 8 file & bytes ổn định (wait_for_traces) RỒI kill cả bench treo lẫn server.
+#   (Nếu muốn log sạch, không deadlock: API_SERVER_COUNT_PROFILE=1 -> start+stop cùng 1 frontend.)
 #
 # Chạy TRONG docker `phuc-nguyen-mv-4571`:
 #   docker exec -ti phuc-nguyen-mv-4571 bash -lc \
@@ -46,6 +47,18 @@ export DATA_DIR="${DATA_DIR:-${TICKET_DIR}}"
 source "${COMMON_DIR}/helper.sh"
 ensure_yq
 
+# AITER_MOREH_ROOT_DIR (do docker.sh set) có thể trỏ vào dev checkout KHÔNG tồn tại trong
+# container build mới -> mọi EngineCore chết lúc startup (thiếu a8w8_*_bruteforce.csv). aiter.jit
+# assert biến này phải set; aiter_moreh đọc configs từ đây. Nếu rỗng/không tồn tại -> fallback về
+# package aiter_moreh đã cài (export để serve.sh + vllm serve con kế thừa). Chỉ sửa trong script này.
+if [ -z "${AITER_MOREH_ROOT_DIR:-}" ] || [ ! -d "${AITER_MOREH_ROOT_DIR}" ]; then
+    _aiter_pkg="$(${PYTHON:-python3} -c 'import os, aiter_moreh; print(os.path.dirname(aiter_moreh.__file__))' 2>/dev/null || true)"
+    if [ -n "${_aiter_pkg}" ] && [ -d "${_aiter_pkg}" ]; then
+        echo "[aiter] AITER_MOREH_ROOT_DIR='${AITER_MOREH_ROOT_DIR:-}' không hợp lệ -> dùng package đã cài: ${_aiter_pkg}" >&2
+        export AITER_MOREH_ROOT_DIR="${_aiter_pkg}"
+    fi
+fi
+
 SCENARIO_YAML="${SCENARIO_YAML:-${SCRIPT_DIR}/scenario.yaml}"
 [ -f "${SCENARIO_YAML}" ] || { echo "[ERROR] không thấy scenario: ${SCENARIO_YAML}" >&2; exit 1; }
 PHASES="${PHASES:-token,time}"
@@ -55,9 +68,13 @@ DROP_HEAD="${DROP_HEAD:-0}"
 REL_THR="${REL_THR:-0.2}"
 THR_US="${THR_US:-50}"
 GANTT_MAX_FIGS="${GANTT_MAX_FIGS:-200}"
-TRACE_WAIT_TIMEOUT="${TRACE_WAIT_TIMEOUT:-600}"   # giây chờ đủ 8 trace flush
+TRACE_WAIT_TIMEOUT="${TRACE_WAIT_TIMEOUT:-900}"   # giây chờ đủ 8 trace flush (export 1 cửa sổ to có thể ~8 phút)
 EXPECT_RANKS="${EXPECT_RANKS:-8}"                 # số worker trace mong đợi (= dp size)
-API_SERVER_COUNT_PROFILE="${API_SERVER_COUNT_PROFILE:-1}"  # =1 để /start+/stop cùng 1 frontend (trace tin cậy)
+SERVER_WAIT_TIMEOUT="${SERVER_WAIT_TIMEOUT:-3600}"  # giây chờ /health TỐI ĐA (giảm 7200->3600)
+SERVE_HEARTBEAT="${SERVE_HEARTBEAT:-600}"         # giây giữa 2 dòng log "đang chờ" (heartbeat)
+SERVE_ATTEMPTS="${SERVE_ATTEMPTS:-2}"             # serve tối đa N lần (1 lần đầu + retry); fail-fast nếu serve.log có lỗi
+API_SERVER_COUNT_PROFILE="${API_SERVER_COUNT_PROFILE:-}"  # RỖNG = KHÔNG đụng preset (api_server_count mặc định = dp).
+                                                          # Đặt =1 nếu muốn /start+/stop về cùng 1 frontend (tránh deadlock /stop_profile, log sạch).
 PYTHON="${PYTHON:-python3}"
 
 # helper đọc scenario.yaml.
@@ -74,8 +91,10 @@ PPC="$(defv prompts_per_concurrency 2)"
 NP_FLOOR="$(defv num_prompts_floor 1)"
 NP_CAP="$(defv num_prompts_cap 256)"
 
+# 1 lần chạy = 1 folder run_<date>_<time>. TẤT CẢ (mọi model/preset/scenario, cả 2 phase
+# token+time) đều ghi vào RESULTS_ROOT này -> CASE_DIR/{tokens,time} cùng 1 chỗ, dễ quản lý.
 RUN_TS="$(date +%Y%m%d_%H%M%S)"
-RESULTS_ROOT="${LOG_ROOT}/${RUN_TS}"
+RESULTS_ROOT="${LOG_ROOT}/run_${RUN_TS}"
 mkdir -p "${RESULTS_ROOT}"
 
 resolve_backend
@@ -107,25 +126,74 @@ patch_token_preset() {  # <base> <out>
         | del(.engine_args.profiler_config)' "$1" > "$2"
 }
 patch_time_preset() {  # <base> <out> <trace_dir>
-    # api_server_count=1 (QUAN TRỌNG): với dp8 mặc định api_server_count=dp=8
-    # (serve.py:105-109) -> /start_profile & /stop_profile bị LB sang 2 frontend
-    # KHÁC nhau -> start/stop lệch engine -> worker không nhận đủ cặp start+stop ->
-    # KHÔNG sinh trace (đúng ca bạn gặp). Ép =1 -> 1 frontend nhận cả start lẫn stop,
-    # broadcast nhất quán tới 8 DP engine -> 8 trace tin cậy, lại sạch /stop (no 500).
+    # GIỮ NGUYÊN preset (KHÔNG ép api_server_count): với dp8 mặc định api_server_count=dp=8
+    # (serve.py:105-109) -> /start_profile & /stop_profile bị LB sang 2 frontend KHÁC nhau
+    # -> sau khi đã GHI XONG 8 trace, các DP engine DEADLOCK (/stop_profile không trả về,
+    # worker spin 100% CPU). Nhưng 8 file trace VẪN được flush ra trace_dir. Vì vậy ta
+    # KHÔNG sửa preset để né deadlock; thay vào đó do_time_phase chạy bench NỀN rồi
+    # wait_for_traces (poll trace_dir) -> đủ trace thì kill (xem do_time_phase).
+    # Đặt API_SERVER_COUNT_PROFILE=1 nếu muốn né deadlock + log sạch (start+stop cùng frontend).
+    # profile/time: enforce_eager=false (cudagraph -> timing thực), VLLM_MOREH_EP_LOG='0'
+    # (tắt log token), inject profiler_config. (token/bench thì ngược lại: eager=true, EP_LOG=1.)
     local pc; pc="$(profiler_pc "$3")"
     PC="${pc}" yq e '.engine_args.enforce_eager = false
         | .env_vars.VLLM_MOREH_EP_LOG = "0"
-        | .engine_args.api_server_count = '"${API_SERVER_COUNT_PROFILE}"'
         | .engine_args.profiler_config = strenv(PC)' "$1" > "$2"
+    if [ -n "${API_SERVER_COUNT_PROFILE}" ]; then
+        yq e -i '.engine_args.api_server_count = '"${API_SERVER_COUNT_PROFILE}" "$2"
+    fi
 }
 
-# --- serve / kill ---
+# --- chờ server lên HOẶC fail-fast nếu serve.log có lỗi ---
+# Poll /health; mỗi nhịp QUÉT serve.log tìm dấu hiệu crash (Traceback/assertion/NCCL broken
+# pipe/worker chết...) -> thấy là DỪNG NGAY (return 1) thay vì chờ hết timeout. Heartbeat mỗi
+# SERVE_HEARTBEAT giây. Tối đa SERVER_WAIT_TIMEOUT giây.
+SERVE_FATAL_RE='Engine core initialization failed|Worker failed with error|BrokenPipeError|Traceback \(most recent call last\)|AssertionError|RuntimeError:|c10::Error|CUDA error|HIP error|Address already in use|EngineDeadError|EngineCore failed to start|ProcessGroupNCCL.*(Broken pipe|shut down)|multiproc_executor\.py.*\] ERROR'
+wait_serve_or_fail() {  # <serve_log> ; 0=healthy, 1=fail/timeout
+    local log="$1" timeout="${SERVER_WAIT_TIMEOUT:-3600}" hb="${SERVE_HEARTBEAT:-600}" t=0
+    echo "  [wait] poll ${BASE_URL}/health (timeout ${timeout}s, heartbeat ${hb}s)..."
+    while (( t < timeout )); do
+        if curl -sf "${BASE_URL}/health" >/dev/null 2>&1; then
+            echo "  [wait] server READY sau ${t}s."; return 0
+        fi
+        if [ -f "${log}" ] && grep -qE "${SERVE_FATAL_RE}" "${log}" 2>/dev/null; then
+            echo "  [wait][FAIL] phát hiện lỗi serve trong ${log} (sau ${t}s):" >&2
+            grep -nE "${SERVE_FATAL_RE}" "${log}" 2>/dev/null | tail -3 >&2
+            return 1
+        fi
+        # engine chết hẳn (sau 90s mà không còn EngineCore/vllm serve nào) -> fail luôn
+        if (( t >= 90 )) && ! pgrep -f "VLLM::EngineCore|bin/vllm serve" >/dev/null 2>&1; then
+            echo "  [wait][FAIL] không còn process vllm serve/EngineCore (sau ${t}s)." >&2
+            return 1
+        fi
+        (( t % hb == 0 )) && echo "  [wait] ${t}s/${timeout}s..."
+        sleep 10; (( t += 10 ))
+    done
+    echo "  [wait][FAIL] timeout ${timeout}s chờ ${BASE_URL}/health." >&2
+    return 1
+}
+
+# --- serve / kill (retry SERVE_ATTEMPTS lần, fail-fast) ---
 start_server() {  # <preset_yaml> <serve_log>
-    PRESET_YAML="$1"
-    kill_server
-    is_enabled "${SKIP_GPU_WAIT:-0}" || wait_for_gpu_free
-    PRESET_YAML="$1" serve_backend "$2"
-    wait_for_server || { echo "[ERROR] server không lên (xem $2)" >&2; return 1; }
+    local preset="$1" log="$2" attempts="${SERVE_ATTEMPTS:-2}" i
+    for (( i=1; i<=attempts; i++ )); do
+        kill_server
+        # dọn thêm tàn dư serve/bench cũ (tránh đụng TCPStore/NCCL của lần serve trước treo/crash).
+        pkill -9 -f "bin/vllm serve" 2>/dev/null || true
+        pkill -9 -f "bin/vllm bench" 2>/dev/null || true
+        sleep 3
+        is_enabled "${SKIP_GPU_WAIT:-0}" || wait_for_gpu_free
+        echo "  [serve] attempt ${i}/${attempts} -> ${log}"
+        PRESET_YAML="${preset}" serve_backend "${log}"
+        if wait_serve_or_fail "${log}"; then return 0; fi
+        if (( i < attempts )); then
+            echo "  [serve][WARN] attempt ${i} FAIL -> kill + retry." >&2
+        else
+            echo "  [serve][ERROR] server không lên sau ${attempts} lần (xem ${log})." >&2
+        fi
+        kill_server
+    done
+    return 1
 }
 
 # --- bench (drive forward passes); profile=1 thêm --profile ---
@@ -148,20 +216,26 @@ run_bench() {  # <profile 0|1> <outdir> <label> <model> <dpath> <osl> <conc> <np
     return 0   # --profile có thể exit !=0 do /stop_profile 500 (vô hại) -> đừng abort
 }
 
-# --- chờ đủ N worker trace flush xong (KHÔNG kill server trước khi đủ) ---
+# --- chờ đủ N worker trace flush XONG HẲN (KHÔNG kill server trước khi đủ + ổn định) ---
+# Trace file rất to (~600MB/rank) và flush BẤT ĐỒNG BỘ nhiều phút sau /stop_profile;
+# /stop_profile có thể deadlock nhưng file vẫn được ghi. Chờ tới khi đủ ${need} file VÀ
+# tổng bytes KHÔNG đổi (đã đóng file) — nếu chỉ đếm file sẽ kill khi file đang ghi dở -> trace hỏng.
 wait_for_traces() {  # <trace_dir> <need> <timeout_s>
-    local dir="$1" need="$2" timeout="$3" t=0 prev=-1 stable=0 cur
+    local dir="$1" need="$2" timeout="$3" t=0 prevcnt=-1 prevsize=-1 stable=0 cur cursize
+    local find_gz=(find "${dir}" -maxdepth 1 -name 'dp*_rank0.*.pt.trace.json.gz')
     echo "  [trace] chờ >=${need} file dp*_rank0.*.pt.trace.json.gz trong ${dir} (timeout ${timeout}s)..."
     while (( t < timeout )); do
-        cur=$(find "${dir}" -maxdepth 1 -name 'dp*_rank0.*.pt.trace.json.gz' 2>/dev/null | wc -l)
+        cur=$("${find_gz[@]}" 2>/dev/null | wc -l)
+        cursize=$("${find_gz[@]}" -printf '%s\n' 2>/dev/null | awk '{s+=$1} END{printf "%.0f", s}')
         if (( cur >= need )); then
-            if (( cur == prev )); then (( ++stable >= 3 )) && break    # ổn định ~6s
+            if (( cur == prevcnt && cursize == prevsize )); then
+                (( ++stable >= 3 )) && break    # đủ file + bytes đứng yên ~6s -> đã flush xong
             else stable=0; fi
         fi
-        prev=${cur}; sleep 2; (( t += 2 ))
+        prevcnt=${cur}; prevsize=${cursize}; sleep 2; (( t += 2 ))
     done
-    cur=$(find "${dir}" -maxdepth 1 -name 'dp*_rank0.*.pt.trace.json.gz' 2>/dev/null | wc -l)
-    if (( cur >= need )); then echo "  [trace] OK: ${cur}/${need} trace."; return 0
+    cur=$("${find_gz[@]}" 2>/dev/null | wc -l)
+    if (( cur >= need )); then echo "  [trace] OK: ${cur}/${need} trace (đã ổn định)."; return 0
     else echo "  [trace][WARN] chỉ thấy ${cur}/${need} trace sau ${t}s (vẫn tiếp tục)." >&2; return 1; fi
 }
 
@@ -184,18 +258,23 @@ do_token_phase() {  # <out_dir> <base_preset> <label> <model_path> <dpath> <osl>
         2>&1 | tee "${out}/analyze_tokens.log" || echo "  [analyze][WARN] tokens lỗi." >&2
 }
 
-# ---------- 1 phase TIME: serve(cudagraph,profiler,frontend ON) -> bench --profile -> wait traces -> analyze ----------
+# ---------- 1 phase TIME: serve(cudagraph/enforce_eager=false,profiler,frontend ON) -> bench --profile -> wait traces -> analyze ----------
 do_time_phase() {  # <out_dir> <base_preset> <label> <model_path> <dpath> <osl> <conc> <rate>
     local out="$1" base="$2" label="$3" model="$4" dpath="$5" osl="$6" conc="$7" rate="$8"
     local np; np="$(clamp "${conc}" "${NP_FLOOR}" "${NP_CAP}")"           # profile: ppc LUÔN = 1
-    echo "  --- [TIME] serve(cudagraph,profiler,api_server_count=${API_SERVER_COUNT_PROFILE}) -> bench --profile(np=${np}) -> wait ${EXPECT_RANKS} trace -> analyze ---"
+    echo "  --- [TIME] serve(enforce_eager=false,profiler,api_server_count=${API_SERVER_COUNT_PROFILE:-preset}) -> bench --profile(np=${np}) -> wait ${EXPECT_RANKS} trace -> analyze ---"
     local trace="${out}/traces"; mkdir -p "${trace}"
     local preset="${out}/preset.yaml"; patch_time_preset "${base}" "${preset}" "${trace}"
     local serve_log="${out}/serve.log"
     is_enabled "${DRY_RUN:-0}" && { echo "  [DRY] time preset -> ${preset}"; return 0; }
     start_server "${preset}" "${serve_log}" || { kill_server; echo "  [TIME][SKIP] serve fail." >&2; return 1; }
-    run_bench 1 "${out}/bench" "${label}" "${model}" "${dpath}" "${osl}" "${conc}" "${np}" "${rate}"
-    wait_for_traces "${trace}" "${EXPECT_RANKS}" "${TRACE_WAIT_TIMEOUT}"  # CHỜ đủ trace trước khi kill
+    # Chạy bench --profile Ở NỀN: với api_server_count mặc định (=dp) thì /stop_profile có
+    # thể DEADLOCK (client treo, worker spin) DÙ 8 trace đã được ghi. Nên KHÔNG block vào
+    # bench; poll trace_dir bằng wait_for_traces rồi kill cả client treo lẫn server.
+    run_bench 1 "${out}/bench" "${label}" "${model}" "${dpath}" "${osl}" "${conc}" "${np}" "${rate}" &
+    local bench_pid=$!
+    wait_for_traces "${trace}" "${EXPECT_RANKS}" "${TRACE_WAIT_TIMEOUT}"  # CHỜ đủ trace (đã flush xong) trước khi kill
+    kill "${bench_pid}" 2>/dev/null; wait "${bench_pid}" 2>/dev/null      # bench treo trên /stop_profile -> kill
     kill_server
     is_enabled "${ANALYZE}" || return 0
     echo "  [analyze] time -> ${out}/analysis"
@@ -203,6 +282,15 @@ do_time_phase() {  # <out_dir> <base_preset> <label> <model_path> <dpath> <osl> 
         --drop-head "${DROP_HEAD}" --rel-thr "${REL_THR}" --thr-us "${THR_US}" --gantt-max-figs "${GANTT_MAX_FIGS}" \
         2>&1 | tee "${out}/analyze_time.log" || echo "  [analyze][WARN] time lỗi." >&2
 }
+
+# PREFLIGHT (chỉ khi chạy phase token): phase TOKEN cần dòng [EP_COLLECT] do moreh patch
+# trong vllm/.../fp8.py sinh ra (gated VLLM_MOREH_EP_LOG). Container build mới KHÔNG có patch
+# này -> analyze_tokens.py báo "No [EP_COLLECT] lines found". Tự áp patch (idempotent) cho chắc.
+if [[ ",${PHASES}," == *",token,"* ]] && ! is_enabled "${DRY_RUN:-0}"; then
+    echo "[preflight] đảm bảo [EP_COLLECT] patch trong installed vllm (cho phase token)..."
+    "${PYTHON}" "${SCRIPT_DIR}/apply_ep_collect_patch.py" || \
+        echo "[preflight][WARN] áp [EP_COLLECT] patch thất bại — phase token có thể thiếu log." >&2
+fi
 
 # Cổng GPU ban đầu (TÔN TRỌNG job đang chạy của người khác): nếu GPU đang bận,
 # ĐỢI & retry mỗi 30s tới khi rảnh RỒI mới bắt đầu — tránh kill nhầm server đang

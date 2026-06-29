@@ -79,5 +79,20 @@ done
 cat $TMP_CONFIG
 echo $@
 
+# 3b. AITER_MOREH_ROOT_DIR may be inherited from the container pointing at a dev
+# checkout that does not exist here (e.g. .../vllm-moreh/src/aiter_moreh). aiter.jit
+# asserts it is set, and aiter_moreh reads its tuned-gemm configs from it, so a stale
+# value makes every EngineCore die at startup with e.g.
+#   No such file or directory: '.../configs/a8w8_bpreshuffle_tuned_gemm_bruteforce.csv'
+# If it is unset or points at a missing dir, fall back to the installed aiter_moreh
+# package (which ships configs/), so the server can start without a dev checkout.
+if [ -z "${AITER_MOREH_ROOT_DIR:-}" ] || [ ! -d "${AITER_MOREH_ROOT_DIR}" ]; then
+  AITER_MOREH_PKG_DIR="$(python3 -c 'import os, aiter_moreh; print(os.path.dirname(aiter_moreh.__file__))' 2>/dev/null || true)"
+  if [ -n "${AITER_MOREH_PKG_DIR:-}" ] && [ -d "${AITER_MOREH_PKG_DIR}" ]; then
+    echo "[serve.sh] AITER_MOREH_ROOT_DIR='${AITER_MOREH_ROOT_DIR:-}' invalid -> using installed package ${AITER_MOREH_PKG_DIR}" >&2
+    export AITER_MOREH_ROOT_DIR="${AITER_MOREH_PKG_DIR}"
+  fi
+fi
+
 # 4. Exec engine
 exec vllm serve "$MODEL_PATH" --config "$TMP_CONFIG" $@

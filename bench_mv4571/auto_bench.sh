@@ -141,13 +141,26 @@ run_one() {
     is_enabled "${SAVE_DETAILED}" && args+=(--save-detailed)
     # prefix caching disabled at the engine -> no reset needed (default off).
     [ "${MODE}" = "bench" ] && is_enabled "${RESET_PREFIX_CACHE}" && reset_prefix_cache
-    local marker=""; [ "${MODE}" = "profile" ] && marker="$(mktemp)"
-    "${args[@]}" 2>&1 | tee "${dir}/${label}.log"
-    # profile: move this scenario's freshly-written traces into a per-run/per-scenario
-    # folder so each capture is traceable (torch profiler dumps them all into one dir).
-    if [ -n "${marker}" ]; then
-        [ -n "${PROFILER_DIR:-}" ] && harvest_profiles "${marker}" "${PROFILER_DIR}/run${r}/${label}"
+    if [ "${MODE}" = "profile" ]; then
+        # `vllm bench serve --profile` can WEDGE on /stop_profile under DP + multiple API
+        # servers (start/stop land on different front-ends -> the DP engines deadlock AFTER
+        # the per-rank traces are written; the client never gets its 200). The trace files
+        # are still flushed to PROFILER_DIR, so run the client in the BACKGROUND and HARVEST
+        # BY POLLING that dir (harvest_profiles), then kill the wedged client -- the same
+        # mechanism the EP-imbalance orchestrator uses. No preset change (no api_server_count,
+        # no ignore_frontend); the harmless /stop_profile 500 is just left to happen.
+        local marker; marker="$(mktemp)"
+        ( "${args[@]}" 2>&1 | tee "${dir}/${label}.log" ) &
+        local bench_pid=$!
+        if [ -n "${PROFILER_DIR:-}" ]; then
+            harvest_profiles "${marker}" "${PROFILER_DIR}/run${r}/${label}"
+        else
+            wait "${bench_pid}"
+        fi
+        kill "${bench_pid}" 2>/dev/null; wait "${bench_pid}" 2>/dev/null
         rm -f "${marker}"
+    else
+        "${args[@]}" 2>&1 | tee "${dir}/${label}.log"
     fi
 }
 
