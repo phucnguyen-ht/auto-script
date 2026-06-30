@@ -84,8 +84,13 @@ def parse_and_aggregate(path, marker=STARTUP_MARKER, use_last=USE_LAST_MARKER):
     assert R > 0 and E > 0, "No [EP_COLLECT] lines found after startup marker"
     print(f"ranks(R)={R} ranks={sorted(ranks_seen)}  experts(E)={E}  moe_layers={len(layers_seen)}")
 
-    # ---- PASS B: cộng counts mọi rank cho mỗi (layer, step) ----
+    # ---- PASS B: gộp counts mọi rank cho mỗi (layer, step) ----
+    # 2 chế độ log:
+    #   SHARDED (glm, hook TRƯỚC all-gather): mỗi rank log shard LOCAL -> g_global = SUM các rank.
+    #   REPLICATED (kimi, hook SAU all-gather): mỗi rank thấy TOÀN CỤC -> 8 rank GIỐNG HỆT
+    #     -> SUM sẽ đếm thừa ×nrank; phải chia lại (dùng 1 rank). Tự dò bằng cách so counts giữa rank.
     agg, agg_ranks, agg_ntok, topk_samples = {}, {}, {}, []
+    det, replicated = {}, None        # det[key] = {ep: hash(counts)} cho vài key đầu để dò chế độ
     with open(path, "r", errors="ignore") as f:
         for i, line in enumerate(f):
             if i <= cut:
@@ -101,7 +106,8 @@ def parse_and_aggregate(path, marker=STARTUP_MARKER, use_last=USE_LAST_MARKER):
             start = m.end(); rb = line.find("]", start)
             if rb == -1:
                 continue
-            counts = np.array(line[start:rb].split(","), dtype=np.int64)
+            counts_str = line[start:rb]
+            counts = np.array(counts_str.split(","), dtype=np.int64)
             if counts.shape[0] != E:
                 continue
             step = it - min_it[(ep, lidx)]
@@ -112,6 +118,30 @@ def parse_and_aggregate(path, marker=STARTUP_MARKER, use_last=USE_LAST_MARKER):
                 agg[key] += counts; agg_ranks[key].add(ep); agg_ntok[key] += ntok
             if ntok > 0:
                 topk_samples.append(counts.sum() / ntok)
+            # --- dò SHARDED vs REPLICATED trên vài (layer,it) đầu có đủ R rank ---
+            if replicated is None and R > 1:
+                dk = (lidx, it)
+                d = det.setdefault(dk, {})
+                d[ep] = hash(counts_str)
+                if len(d) >= R:
+                    verdict = (len(set(d.values())) == 1)   # R rank giống hệt?
+                    det.setdefault("_votes", []).append(verdict)
+                    if len(det["_votes"]) >= 3:
+                        replicated = sum(det["_votes"]) > len(det["_votes"]) / 2
+                    det = {k: v for k, v in det.items() if k == "_votes"}
+
+    if replicated is None:
+        replicated = False
+    mode = "REPLICATED (kimi: ranks identical -> use 1 rank)" if replicated \
+        else "SHARDED (glm: sum local shards)"
+    print(f"rank-log mode = {mode}")
+    if replicated:
+        # mỗi rank đã là TOÀN CỤC; SUM cho ×nrank -> chia lại để được g_global thật (num_tokens đúng).
+        for key in agg:
+            nr = len(agg_ranks[key])
+            if nr > 1:
+                agg[key] = agg[key] // nr
+                agg_ntok[key] = agg_ntok[key] // nr
 
     topk = int(round(np.median(topk_samples))) if topk_samples else 0
     return agg, agg_ranks, agg_ntok, R, E, topk, sorted(layers_seen)
@@ -137,6 +167,48 @@ def auto_decode_threshold(num_tokens):
         return (float(u.max()) + 1) if len(u) else 1.0      # 1 loại step -> coi hết là decode
     j = int(np.argmax(np.diff(np.log10(u.astype(float)))))  # khe log lớn nhất giữa 2 giá trị kề
     return float(np.sqrt(u[j] * u[j + 1]))                  # trung điểm hình học của khe
+
+
+def plot_auto_threshold(num_tokens, out, threshold=None):
+    """Vẽ GIẢI THÍCH cách auto chia decode/prefill: histogram num_tokens trên trục log,
+    tô vùng KHE TRỐNG lớn nhất (giữa max-decode và min-prefill), vạch ngưỡng = trung điểm
+    hình học khe. Cho thấy ngưỡng nằm GIỮA vùng trống (vd 1666 = sqrt(96*28920)) chứ KHÔNG
+    phải 'decode tới 1666 token' — decode thực sự chỉ tới max-decode."""
+    nt = np.asarray(num_tokens, dtype=np.float64)
+    nt = nt[nt > 0]
+    if len(nt) == 0:
+        return
+    u = np.unique(nt.astype(np.int64)); u = u[u > 0]
+    if threshold is None:
+        threshold = auto_decode_threshold(nt)
+    # khe log lớn nhất
+    lo = hi = None
+    if len(u) >= 2:
+        d = np.diff(np.log10(u.astype(float))); j = int(np.argmax(d))
+        lo, hi = float(u[j]), float(u[j + 1])
+    n_dec = int((nt <= threshold).sum()); n_pre = int((nt > threshold).sum())
+
+    fig, ax = plt.subplots(figsize=(13, 4.5))
+    lo_e = np.log10(max(nt.min(), 1)); hi_e = np.log10(nt.max())
+    bins = np.logspace(lo_e - 0.05, hi_e + 0.05, 60)
+    ax.hist(nt, bins=bins, color="#4C78A8", edgecolor="black", alpha=0.85)
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("num_tokens / step (log)"); ax.set_ylabel("#steps (log)")
+    if lo is not None:
+        ax.axvspan(lo, hi, color="orange", alpha=0.18,
+                   label=f"largest log-gap  {int(lo)} → {int(hi)}  (ratio {hi/lo:.0f}×)")
+    ax.axvline(threshold, color="red", ls="--", lw=2,
+               label=f"threshold = {threshold:.0f}  = geomean(gap)")
+    if lo is not None:
+        ax.axvline(lo, color="green", ls=":", lw=1.2, label=f"max decode num_tokens = {int(lo)}")
+        ax.axvline(hi, color="purple", ls=":", lw=1.2, label=f"min prefill num_tokens = {int(hi)}")
+    ax.set_title(f"AUTO decode/prefill split — decode (≤thr): {n_dec} steps | "
+                 f"prefill (>thr): {n_pre} steps  [threshold is the MIDPOINT of the empty gap]")
+    ax.legend(loc="upper right", fontsize=8)
+    plt.tight_layout()
+    plt.savefig(os.path.join(out, "auto_threshold_split.png"), dpi=130); plt.close()
+    print(f"  saved auto_threshold_split.png  (threshold={threshold:.1f}, "
+          f"gap {lo}->{hi}, decode={n_dec}, prefill={n_pre})")
 
 
 def build_steps_df(agg, agg_ranks, R, E, topk, decode_max_tokens=None):
@@ -355,16 +427,45 @@ def export(steps_df, expert_dist_global, R, E, topk, out):
     return summary
 
 
+def verify_threshold(steps_df, concurrency):
+    """VERIFY: so sánh split decode/prefill khi dùng auto vs 4x/6x*conc.
+    Non-MTP: cả 3 trùng nhau (decode≈conc, xa khe). MTP: 4xconc cắt nhầm vào decode
+    (decode ≈ 6..15×conc) nên decode-count + imbalance khác hẳn auto/6x."""
+    nt = steps_df["num_tokens"].values
+    im = steps_df["rank_max_over_min"].values
+    auto = auto_decode_threshold(nt)
+    print("\n===== VERIFY ngưỡng decode/prefill: auto vs 4x/6x*conc =====")
+    print(f"  concurrency={concurrency}  auto_threshold={auto:.1f}  (n_steps={len(nt)})")
+    base = None
+    for name, thr in [("auto", auto), ("4xconc", 4 * concurrency), ("6xconc", 6 * concurrency)]:
+        dmask = nt <= thr
+        dmean = float(im[dmask].mean()) if dmask.any() else float("nan")
+        pmean = float(im[~dmask].mean()) if (~dmask).any() else float("nan")
+        nd = int(dmask.sum())
+        if base is None:
+            base = nd
+        print(f"  {name:7} thr={thr:8.1f} | decode {nd:8d} (imb mean {dmean:5.2f}) | "
+              f"prefill {int((~dmask).sum()):7d} (imb mean {pmean:5.2f})")
+    n4 = int((nt <= 4 * concurrency).sum()); na = int((nt <= auto).sum())
+    if n4 == na:
+        print("  => auto == 4xconc trên dữ liệu này (đặc trưng NON-MTP: decode≈conc).")
+    else:
+        print(f"  => auto != 4xconc ({na} vs {n4} decode-step): đặc trưng MTP — 4xconc cắt nhầm "
+              "vào cụm decode (decode num_tokens ≈ 6..15×conc). Dùng auto.")
+
+
 def main():
     ap = argparse.ArgumentParser(description="MV-4571 EP imbalance theo #token (headless).")
     ap.add_argument("--log", required=True, help="serve.log path hoặc glob (lấy file mới nhất nếu glob).")
     ap.add_argument("--out", required=True, help="thư mục lưu kết quả.")
-    ap.add_argument("--decode-max-tokens", default="4xconc",
+    ap.add_argument("--decode-max-tokens", default="auto",
                     help="ngưỡng chia phase: step có num_tokens(global) <= ngưỡng => decode, else "
-                         "prefill_mixed. '4xconc' (mặc định) = 4*concurrency; 'auto' = tự dò khe "
-                         "lưỡng cực; hoặc 1 số cụ thể.")
+                         "prefill_mixed. 'auto' (MẶC ĐỊNH) = tự dò KHE lưỡng cực (đúng cho cả MTP "
+                         "lẫn non-MTP, không cần biết conc); 'NxconC' (vd '4xconc','6xconc') = N*conc; "
+                         "hoặc 1 số cụ thể. LƯU Ý: 4xconc SAI cho MTP (decode≈6..15×conc -> bị cắt); "
+                         "auto tách ở vùng trống nên luôn đúng.")
     ap.add_argument("--concurrency", type=int, default=8,
-                    help="số request đồng thời (driving '4xconc': ngưỡng decode = 4*concurrency).")
+                    help="số request đồng thời (driving 'NxconC').")
     ap.add_argument("--layers", default="all",
                     help="'all' (mặc định) hoặc list layer cho per-layer-load, vd '3,8,40,41'.")
     args = ap.parse_args()
@@ -378,19 +479,23 @@ def main():
     agg, agg_ranks, agg_ntok, R, E, topk, moe_layers = parse_and_aggregate(log_path)
     print(f"TOPK(inferred)={topk}  EXPERTS_PER_RANK={E // R}  groups={len(agg)}")
 
-    # Ngưỡng chia decode/prefill: mặc định 4*concurrency (theo yêu cầu ticket); 'auto' = tự dò;
-    # hoặc 1 số cụ thể. (decode num_tokens ~ #seq đang chạy ~ conc, nên 4*conc tách an toàn.)
+    # Ngưỡng chia decode/prefill: mặc định 'auto' (tự dò khe lưỡng cực) — đúng cho cả MTP
+    # lẫn non-MTP. 'NxconC' = N*conc (4xconc SAI cho MTP); hoặc 1 số cụ thể.
     _dmt = str(args.decode_max_tokens).strip().lower()
-    if _dmt == "auto":
+    _m = re.match(r"^(\d+)x?\*?conc$", _dmt)
+    if _dmt in ("auto", ""):
         dmt = None
-    elif _dmt in ("4xconc", "4*conc", "conc4", ""):
-        dmt = 4 * args.concurrency
+    elif _m:
+        dmt = int(_m.group(1)) * args.concurrency
     else:
         dmt = float(args.decode_max_tokens)
     print(f"decode-threshold source = {args.decode_max_tokens!r} "
           f"(concurrency={args.concurrency}) -> "
           f"{'auto-detect' if dmt is None else f'{dmt:g} tokens'}")
     steps_df, expert_dist_global = build_steps_df(agg, agg_ranks, R, E, topk, dmt)
+    verify_threshold(steps_df, args.concurrency)                              # VERIFY auto vs 4x/6x
+    eff_thr = dmt if dmt is not None else auto_decode_threshold(steps_df["num_tokens"].values)
+    plot_auto_threshold(steps_df["num_tokens"].values, args.out, eff_thr)     # đồ thị giải thích split
     expert_dist_by_layer = build_expert_dist_by_layer(agg, agg_ranks, R, E)
 
     layers = sorted(expert_dist_by_layer) if args.layers.strip().lower() == "all" \

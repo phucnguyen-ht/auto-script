@@ -19,22 +19,23 @@ models:
   glm5.2:                         # MV-4571: MTP 0 + MTP 3 = 2 preset
     model_path: /remote/vast0/share-mv/zai-org/GLM-5.2-FP8
     presets:
-      - glm5.2/dp8ep8/noMTP-bs64-dg.yaml   # MTP 0
-      - glm5.2/dp8ep8/MTP5-bs64-dg.yaml    # MTP 3
+      # - glm5.2/dp8ep8/noMTP-bs64-dg.yaml   # MTP 0
+      - glm5.2/dp8ep8/MTP5-bs64-dg.yaml    # MTP 5
   kimi2.6:                        # MV-4572
     model_path: /remote/vast0/share-mv/moonshotai/Kimi-K2.6
     presets:
       - kimi2.6/dp8ep8/noMTP.yaml
+      - kimi2.6/dp8ep8/MTP3.yaml
 
 cases:
   # ---- glm5.2 (MV-4571) ----
-  - { model: glm5.2, name: 8k,   osl: 1024, rates: ["inf"], concurrencies: [8, 22, 31, 36, 52] }
-  - { model: glm5.2, name: 10k,  osl: 500,  rates: ["inf"], concurrencies: [8, 22, 31, 36, 52] }
-  - { model: glm5.2, name: 100k, osl: 500,  rates: ["inf"], concurrencies: [8, 22, 31, 36] }
-  - { model: glm5.2, name: 1M,   osl: 500,  rates: ["inf"], concurrencies: [8] }
+  # - { model: glm5.2, name: 8k,   osl: 1024, rates: ["inf"], concurrencies: [8, 22, 31, 36, 52] }
+  # - { model: glm5.2, name: 10k,  osl: 500,  rates: ["inf"], concurrencies: [8, 22, 31, 36, 52] }
+  # - { model: glm5.2, name: 100k, osl: 500,  rates: ["inf"], concurrencies: [8, 22, 31, 36] }
+  # - { model: glm5.2, name: 1M,   osl: 500,  rates: ["inf"], concurrencies: [8] }
 
   # ---- kimi2.6 (MV-4572) — tạm 1 conc/ISL (desc chưa define) ----
   # - { model: kimi2.6, name: 8k,   osl: 1024, rates: ["inf"], concurrencies: [8] }
   - { model: kimi2.6, name: 10k,  osl: 500,  rates: ["inf"], concurrencies: [8, 36] }
-  # - { model: kimi2.6, name: 100k, osl: 500,  rates: ["inf"], concurrencies: [8] }
+  - { model: kimi2.6, name: 100k, osl: 500,  rates: ["inf"], concurrencies: [8, 36] }
   # - { model: kimi2.6, name: 1M,   osl: 500,  rates: ["inf"], concurrencies: [8] }

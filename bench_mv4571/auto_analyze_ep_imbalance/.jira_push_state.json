@@ -1,0 +1,55 @@
+{
+  "method": {
+    "MV-4571": {
+      "overview": "92569",
+      "token": "92570",
+      "time": "92571"
+    },
+    "MV-4572": {
+      "overview": "92640",
+      "token": "92641",
+      "time": "92642"
+    }
+  },
+  "scenarios": {
+    "MV-4571|cfg|mtp|8k_rinf_c8": "92572",
+    "MV-4571|cfg|mtp|8k_rinf_c22": "92573",
+    "MV-4571|cfg|mtp|8k_rinf_c31": "92574",
+    "MV-4571|cfg|mtp|8k_rinf_c36": "92575",
+    "MV-4571|cfg|mtp|8k_rinf_c52": "92576",
+    "MV-4571|cfg|mtp|10k_rinf_c8": "92577",
+    "MV-4571|cfg|mtp|10k_rinf_c22": "92578",
+    "MV-4571|cfg|mtp|100k_rinf_c8": "92579",
+    "MV-4571|cfg|mtp|100k_rinf_c22": "92580",
+    "MV-4571|cfg|mtp|100k_rinf_c31": "92581",
+    "MV-4571|cfg|mtp|100k_rinf_c36": "92582",
+    "MV-4571|cfg|mtp|1M_rinf_c8": "92583",
+    "MV-4571|cfg|nomtp|8k_rinf_c8": "92584",
+    "MV-4571|cfg|nomtp|8k_rinf_c22": "92585",
+    "MV-4571|cfg|nomtp|8k_rinf_c31": "92586",
+    "MV-4571|cfg|nomtp|8k_rinf_c36": "92587",
+    "MV-4571|cfg|nomtp|8k_rinf_c52": "92588",
+    "MV-4571|cfg|nomtp|100k_rinf_c8": "92589",
+    "MV-4571|cfg|nomtp|100k_rinf_c22": "92590",
+    "MV-4571|cfg|nomtp|100k_rinf_c31": "92591",
+    "MV-4571|cfg|nomtp|100k_rinf_c36": "92592",
+    "MV-4571|table_token": "92602",
+    "MV-4571|table_time": "92603",
+    "MV-4572|cfg|mtp|10k_rinf_c8": "92643",
+    "MV-4572|cfg|mtp|10k_rinf_c36": "92644",
+    "MV-4572|cfg|mtp|100k_rinf_c8": "92645",
+    "MV-4572|cfg|mtp|100k_rinf_c36": "92646",
+    "MV-4572|cfg|nomtp|10k_rinf_c8": "92647",
+    "MV-4572|cfg|nomtp|10k_rinf_c36": "92648",
+    "MV-4572|cfg|nomtp|100k_rinf_c8": "92649",
+    "MV-4572|cfg|nomtp|100k_rinf_c36": "92650",
+    "MV-4572|table_token": "92651",
+    "MV-4572|table_time": "92652"
+  },
+  "group_main": {
+    "MV-4571|main|mtp": "92572",
+    "MV-4571|main|nomtp": "92584",
+    "MV-4572|main|mtp": "92643",
+    "MV-4572|main|nomtp": "92647"
+  }
+}

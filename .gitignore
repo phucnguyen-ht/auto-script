@@ -1,12 +1,12 @@
 aws.sh
-logs/
+# any folder whose name contains "logs" (logs, logs2, rerun_logs, claude-logs)
+*logs*/
 profiling_result/
 *.pyc
 tmp_profile_*.yaml
 __pycache__/
 summary/
 *.zip
-logs**
 
 # bench_mv4571/EP_imbalance_analysis
 3rdparty/

@@ -23,7 +23,7 @@
 #   5c                  -> verify_barrier_abs() (THR_US µs, default 50)
 #   Export              -> export()
 # =============================================================================
-import os, glob, gzip, re, json, collections, argparse, shutil
+import os, glob, gzip, re, json, collections, argparse, shutil, bisect
 from dataclasses import dataclass
 from enum import Enum
 import numpy as np
@@ -35,10 +35,21 @@ from matplotlib.patches import Patch
 
 
 # ----------------------------- I/O nền tảng -----------------------------
+try:
+    import orjson as _json
+    def _load_gz(path):
+        with gzip.open(path, "rb") as fh:
+            return _json.loads(fh.read())
+except ImportError:
+    def _load_gz(path):
+        with gzip.open(path, "rb") as fh:
+            return json.load(fh)
+
+
 def iter_events(path):
-    """Stream từng phần tử traceEvents[] (không nạp cả file ~7M event vào RAM)."""
-    with gzip.open(path, "rb") as fh:
-        yield from ijson.items(fh, "traceEvents.item")
+    """Duyệt traceEvents[] (orjson nhanh nhất; host đủ RAM, nạp 1 file/lần)."""
+    d = _load_gz(path)
+    yield from (d["traceEvents"] if isinstance(d, dict) else d)
 
 
 def rank_of(path):
@@ -56,7 +67,18 @@ REGION_DT = np.dtype([
     ("rs_start",     "f8"), ("rs_end",     "f8"),  # reduce-scatter: BẮT ĐẦU (-> MoE kết thúc) / kết thúc
     ("nstage",       "i4"), ("sig",        "i8"),  # #kernel matmul (1=fused/2=two-stage); id chữ ký kernel
     ("moe_busy",     "f8"),                        # tổng DUR kernel MoE (= perfetto "MoE")
+    ("cg_phase",     "i4"),                         # phase theo cudagraph: 1 prefill / 2 decode / 0 unknown
 ])
+
+# Phân chia prefill/decode theo dấu CUDA-GRAPH (tổng quát cho cả MTP lẫn non-MTP):
+#   cudagraph_mode bật capture cho DECODE (replay) nhưng KHÔNG cho prefill.
+#   -> kernel GPU của 1 cụm prefill được launch EAGER: mỗi kernel có 1 flow "ac2g"
+#      (mũi tên nâu) nối từ op CPU (hipLaunchKernel) lên -> flow 'f' của nó CÓ 's' khớp id.
+#   -> kernel GPU của 1 cụm decode được REPLAY từ graph: KHÔNG có mũi tên CPU riêng
+#      -> flow 'f' KHÔNG có 's' khớp id.
+#   Nhãn cụm = decode nếu phần lớn arrow trong cửa sổ [gather_start, rs_end] thiếu 's'.
+#   (Khác với nstage 1/2-stage: nstage sai cho MTP vì MTP luôn dùng kernel fused -> decode≈0.)
+CG_NOARROW_THR = 0.5
 
 
 class Phase(str, Enum):
@@ -69,11 +91,16 @@ def is_comm(n):
 
 
 def moe_kind(n):
+    # --- glm5.2 (AITER MoE) kernels ---
     if "MoeSortingClearWorkspace" in n: return "sortClear"
     if "MoeSortingMultiPhase"     in n: return "sortMP"
     if "MoeSorting"               in n: return "sort"
     if "kernel_moe_gemm" in n: return "gemm1" if "(ck::InMemoryDataOperationEnum)0" in n else "gemm2"
     if "fmoe" in n: return "fmoe"
+    # --- kimi2.6 (VLLM_ROCM_USE_AITER_MOE=0: native/triton compressed-tensors MoE) ---
+    if "moe_align_block_size" in n: return "sort"          # token->expert sorting (opener)
+    if "count_and_sort_expert_tokens" in n: return "sort"
+    if "fused_moe_kernel" in n: return "fmoe"              # expert matmul (up/down proj)
     return None
 
 
@@ -90,10 +117,21 @@ def _sig_id(kinds):
 
 def parse_rank_pairs(path):
     """1 rank -> np.ndarray[Region] + #comm. opener đầu MỞ cụm (gather=comm liền trước);
-    comm kế tiếp ĐÓNG cụm (=reduce-scatter)."""
+    comm kế tiếp ĐÓNG cụm (=reduce-scatter). Đồng thời thu flow "ac2g" để gán cg_phase
+    (prefill=eager có arrow / decode=graph replay không arrow)."""
     comm, opn, ncomm = [], [], 0
+    s_ids = set(); f_ts = []; f_id = []          # arrow: 's' (CPU launch) / 'f' (GPU kernel)
     for e in iter_events(path):
-        if e.get("ph") != "X" or e.get("cat") != "kernel":
+        cat = e.get("cat"); ph = e.get("ph")
+        if cat == "ac2g":                         # flow event (mũi tên nâu CPU->GPU)
+            if ph == "s":
+                s_ids.add(e.get("id"))
+            elif ph == "f":
+                t = e.get("ts")
+                if t is not None:
+                    f_ts.append(float(t)); f_id.append(e.get("id"))
+            continue
+        if ph != "X" or cat != "kernel":
             continue
         ts = e.get("ts"); dur = e.get("dur"); n = e.get("name", "")
         if ts is None or dur is None:
@@ -106,6 +144,23 @@ def parse_rank_pairs(path):
             if k is not None:
                 opn.append((ts, end, "o", k))
     evs = sorted(comm + opn, key=lambda x: x[0])
+
+    # arrow lookup: f_ts sorted + has_s (flow 'f' có 's' khớp id hay không), vectorized
+    if f_ts:
+        fts = np.asarray(f_ts); fid = np.asarray(f_id)
+        order = np.argsort(fts); fts = fts[order]
+        s_arr = np.fromiter(s_ids, dtype=fid.dtype, count=len(s_ids)) if s_ids \
+            else np.empty(0, dtype=fid.dtype)
+        has_s = np.isin(fid[order], s_arr)
+    else:
+        fts = np.empty(0); has_s = np.empty(0, bool)
+
+    def cg_label(gs, rse):
+        a = bisect.bisect_left(fts, gs); b = bisect.bisect_right(fts, rse)
+        if b <= a:
+            return 0                              # không arrow trong cửa sổ -> unknown
+        noarrow = 1.0 - has_s[a:b].mean()
+        return 2 if noarrow >= CG_NOARROW_THR else 1
 
     regs, last, cur = [], None, None
     for ts, end, typ, k in evs:
@@ -124,7 +179,8 @@ def parse_rank_pairs(path):
             if cur is not None:
                 regs.append((cur["gather_start"], cur["gather_end"], cur["moe_start"], cur["moe_end"],
                              ts, end, int(sum(x in MATMUL for x in cur["kinds"])),
-                             _sig_id(cur["kinds"]), cur["busy"]))
+                             _sig_id(cur["kinds"]), cur["busy"],
+                             cg_label(cur["gather_start"], end)))
                 cur = None
             last = (ts, end)
     return np.array(regs, dtype=REGION_DT), ncomm
@@ -141,6 +197,7 @@ class Clusters:
     nstage:       np.ndarray
     sig:          np.ndarray
     moe_busy:     np.ndarray
+    cg_phase:     np.ndarray = None
     @property
     def moe(self):        return self.rs_start - self.gather_end
     @property
@@ -177,18 +234,36 @@ def parse_all(files, drop_head, out):
     C = Clusters(ranks=np.array(ranks),
                  gather_start=field("gather_start"), gather_end=field("gather_end"),
                  rs_start=field("rs_start"), rs_end=field("rs_end"),
-                 nstage=field("nstage"), sig=field("sig"), moe_busy=field("moe_busy"))
+                 nstage=field("nstage"), sig=field("sig"), moe_busy=field("moe_busy"),
+                 cg_phase=field("cg_phase"))
     np.savez_compressed(os.path.join(out, "trace_pairs.npz"), ranks=C.ranks, MOE=C.moe,
                         GS=C.gather_start, GE=C.gather_end, RSs=C.rs_start, RSe=C.rs_end,
-                        NSTAGE=C.nstage, SIG=C.sig, MOE_BUSY=C.moe_busy)
-    nst0 = C.nstage[0]
-    phase = np.where(nst0 == 1, Phase.PREFILL.value, Phase.DECODE.value)
-    pre = phase == Phase.PREFILL.value
-    dec = phase == Phase.DECODE.value
+                        NSTAGE=C.nstage, SIG=C.sig, MOE_BUSY=C.moe_busy, CG_PHASE=C.cg_phase)
     print(f"ranks={list(C.ranks)}  R={C.shape[0]}  clusters K={C.shape[1]}  "
           f"MoE-time median={np.median(C.moe):.1f}us")
-    print("phase:", {"prefill(1-kernel)": int(pre.sum()), "decode(2-kernel)": int(dec.sum())})
-    return C, phase, pre, dec, ncomm
+    return C, ncomm
+
+
+def phase_masks(C, method):
+    """Trả (phase[str], pre, dec) theo method: 'kernel' (nstage 1/2) hoặc 'cudagraph'
+    (majority arrow). 'auto' -> cudagraph nếu kernel suy biến (decode hoặc prefill = 0)."""
+    nst0 = C.nstage[0]
+    pre_k = nst0 == 1
+    # cudagraph: majority vote 8 rank (decode nếu >=1/2 rank gán decode); bỏ unknown(0)
+    cg = C.cg_phase
+    dec_votes = (cg == 2).sum(0); pre_votes = (cg == 1).sum(0)
+    dec_cg = dec_votes >= pre_votes                     # hòa -> decode (an toàn cho MTP)
+    if method == "auto":
+        method = "kernel" if (pre_k.any() and (~pre_k).any()) else "cudagraph"
+    if method == "kernel":
+        pre = pre_k
+    else:
+        pre = ~dec_cg
+    dec = ~pre
+    phase = np.where(pre, Phase.PREFILL.value, Phase.DECODE.value)
+    print(f"phase method = {method}: "
+          f"prefill={int(pre.sum())} decode={int(dec.sum())}")
+    return method, phase, pre, dec
 
 
 # ======================= Bước 0 — VERIFY schema =======================
@@ -261,23 +336,54 @@ def verify_same_kernel(C):
     return bool(sig_same.all())
 
 
-# ======================= 1c — phân loại phase theo kernel =======================
-def verify_phase(C, pre, dec):
+# ======================= 1c — kiểm tra phase (theo method ĐÃ CHỌN) =======================
+def verify_phase(C, pre, dec, method="cudagraph"):
+    """Sanity-check trên mask phase ĐÃ CHỌN (pre/dec từ phase_masks, mặc định cudagraph).
+    KHÔNG phải phân loại theo kernel — nhãn cũ '1-kernel/2-kernel' đã bỏ vì nstage là
+    lựa chọn KERNEL của AITER (fused vs 2-stage gemm), không phải tín hiệu prefill/decode."""
     mt = C.moe.mean(0)
     med_pre = float(np.median(mt[pre])) if pre.any() else float("nan")
     med_dec = float(np.median(mt[dec])) if dec.any() else float("nan")
-    c1 = bool((C.nstage == C.nstage[0]).all() and (C.sig == C.sig[0]).all())
     c3 = med_pre > med_dec
-    print("\n===== 1c — phân loại phase theo KERNEL =====")
-    print("phase counts:", {"prefill(1-kernel)": int(pre.sum()), "decode(2-kernel)": int(dec.sum())})
-    print(f"  prefill (1 kernel/fmoe): MoE-time median = {med_pre:8.1f} us")
-    print(f"  decode  (2 kernel/gemm): MoE-time median = {med_dec:8.1f} us")
-    print(f"  (1) 8 rank/cụm cùng kernel: {'OK' if c1 else 'FAIL'}")
-    print(f"  (2) nhãn: 1 stage -> prefill, 2 stage -> decode")
-    print(f"  (3) time(prefill) > time(decode): {'OK' if c3 else 'FAIL'}  ({med_pre:.0f} > {med_dec:.0f} us)")
-    if not (c1 and c3):
-        print("  [WARN] xác nhận phase chưa đạt (c1 & c3).")
-    return c1 and c3
+    print(f"\n===== 1c — kiểm tra phase (method = {method}) =====")
+    print("phase counts:", {"prefill": int(pre.sum()), "decode": int(dec.sum())})
+    print(f"  prefill: MoE-time median = {med_pre:8.1f} us")
+    print(f"  decode : MoE-time median = {med_dec:8.1f} us")
+    print(f"  sanity time(prefill) > time(decode): {'OK' if c3 else 'FAIL/n.a.'}  "
+          f"({med_pre:.0f} vs {med_dec:.0f} us)")
+    return c3
+
+
+# ======================= 1d — verify cudagraph vs kernel =======================
+def cg_masks(C):
+    """Majority-vote phase theo cudagraph arrow: (cg_dec bool, valid bool)."""
+    cg = C.cg_phase
+    dec_votes = (cg == 2).sum(0); pre_votes = (cg == 1).sum(0)
+    cg_dec = dec_votes >= pre_votes            # hòa/không-arrow -> decode (an toàn MTP)
+    valid = (cg != 0).any(0)                   # >=1 rank có thông tin arrow
+    return cg_dec, valid
+
+
+def verify_phase_method(C):
+    """So khớp 2 cách chia prefill/decode: cudagraph(arrow) vs kernel(nstage 1/2).
+    Báo match% + confusion. kernel sai cho MTP (decode≈0); cudagraph tổng quát."""
+    nst0 = C.nstage[0]; kpre = nst0 == 1; kdec = ~kpre
+    cg_dec, valid = cg_masks(C); cg_pre = ~cg_dec
+    agree = (cg_dec == kdec) & valid
+    print("\n===== 1d — VERIFY phase: cudagraph(arrow) vs kernel(nstage) =====")
+    print(f"  kernel   : prefill={int(kpre.sum())} decode={int(kdec.sum())}")
+    print(f"  cudagraph: prefill={int(cg_pre.sum())} decode={int(cg_dec.sum())} "
+          f"(unknown cụm bỏ qua: {int((~valid).sum())})")
+    print(f"  MATCH = {int(agree.sum())}/{int(valid.sum())} = "
+          f"{100*agree.sum()/max(1,int(valid.sum())):.3f}%")
+    print(f"   cg=prefill & kernel=prefill: {int((cg_pre & kpre & valid).sum())}")
+    print(f"   cg=prefill & kernel=decode : {int((cg_pre & kdec & valid).sum())}")
+    print(f"   cg=decode  & kernel=prefill: {int((cg_dec & kpre & valid).sum())}")
+    print(f"   cg=decode  & kernel=decode : {int((cg_dec & kdec & valid).sum())}")
+    if int(kdec.sum()) == 0:
+        print("  [NOTE] kernel cho decode=0 (đặc trưng MTP: luôn dùng kernel fused) "
+              "-> cudagraph mới đúng.")
+    return round(100 * float(agree.sum()) / max(1, int(valid.sum())), 3)
 
 
 # ======================= Bảng theo RANK (ms) =======================
@@ -473,8 +579,9 @@ def verify_barrier_abs(C, out, thr_us=50.0):
 
 
 # ======================= Export =======================
-def export(C, MET, pre, dec, out):
+def export(C, MET, pre, dec, out, phase_method="cudagraph", phase_match_pct=None):
     K = C.shape[1]
+    nst0 = C.nstage[0]; cg_dec, _ = cg_masks(C)
 
     def block(mask):
         v = MET.imb_maxmin[mask]
@@ -484,7 +591,12 @@ def export(C, MET, pre, dec, out):
                 "maxmin_p99": round(float(np.percentile(v, 99)), 3) if len(v) else None}
     summary = {
         "out": out, "ranks": [int(x) for x in C.ranks], "clusters": int(K),
-        "phase_by_kernel": {"prefill(1-kernel/fmoe)": int(pre.sum()), "decode(2-kernel/gemm)": int(dec.sum())},
+        "phase_method": phase_method,
+        "phase_match_cudagraph_vs_kernel_pct": phase_match_pct,
+        "phase": {"prefill": int(pre.sum()), "decode": int(dec.sum())},
+        "phase_by_kernel": {"prefill(1-kernel/fmoe)": int((nst0 == 1).sum()),
+                            "decode(2-kernel/gemm)": int((nst0 != 1).sum())},
+        "phase_by_cudagraph": {"prefill": int((~cg_dec).sum()), "decode": int(cg_dec.sum())},
         "verify_same_kernel_pct": round(float((C.sig == C.sig[0]).all(0).mean()) * 100, 2),
         "moe_time_per_rank_ms": [round(float(x), 1) for x in (C.moe.sum(1) / 1e3)],
         "gather_time_per_rank_ms": [round(float(x), 1) for x in (C.gather_dur.sum(1) / 1e3)],
@@ -512,6 +624,9 @@ def main():
     ap.add_argument("--gantt-max-figs", type=int, default=200, help="số ảnh gantt tối đa (~200).")
     ap.add_argument("--no-gantt", action="store_true", help="bỏ qua vẽ gantt (nhanh).")
     ap.add_argument("--no-verify-schema", action="store_true", help="bỏ Bước-0 verify schema (nhanh).")
+    ap.add_argument("--phase-method", choices=["cudagraph", "kernel", "auto"], default="cudagraph",
+                    help="chia prefill/decode: cudagraph(arrow, tổng quát MTP+nonMTP, mặc định) | "
+                         "kernel(nstage 1/2, sai cho MTP) | auto(cudagraph nếu kernel suy biến).")
     args = ap.parse_args()
 
     files = list_files(args.trace_dir)
@@ -519,11 +634,13 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     print(f"TRACE_DIR = {args.trace_dir}\nOUT       = {args.out}\n{len(files)} files")
 
-    C, phase, pre, dec, ncomm = parse_all(files, args.drop_head, args.out)   # Bước 1
+    C, ncomm = parse_all(files, args.drop_head, args.out)                    # Bước 1
     if not args.no_verify_schema:
         verify_schema(files, ncomm)                                          # Bước 0
     verify_same_kernel(C)                                                    # 1b
-    verify_phase(C, pre, dec)                                                # 1c
+    match_pct = verify_phase_method(C)                                       # 1d (cudagraph vs kernel)
+    method, phase, pre, dec = phase_masks(C, args.phase_method)              # chọn phase
+    verify_phase(C, pre, dec, method)                                        # 1c (kiểm tra masks đã chọn)
     per_rank_table(C, args.out)                                              # Bảng theo RANK
     MET = compute_metrics(C)                                                 # STRUCT 3
     plot_time_imbalance_hist(MET, C.shape[1], pre, dec, args.out)            # Section 3
@@ -531,7 +648,7 @@ def main():
         plot_gantt(C, phase, args.out, max_figs=args.gantt_max_figs)         # Section 5
     verify_barrier_rel(C, args.out, rel_thr=args.rel_thr)                    # 5b
     verify_barrier_abs(C, args.out, thr_us=args.thr_us)                      # 5c
-    export(C, MET, pre, dec, args.out)                                       # Export
+    export(C, MET, pre, dec, args.out, phase_method=method, phase_match_pct=match_pct)  # Export
 
 
 if __name__ == "__main__":

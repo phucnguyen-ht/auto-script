@@ -13,7 +13,8 @@ engine_args:
   mm_encoder_tp_mode: data
   gpu_memory_utilization: 0.9
   kv_cache_dtype: auto
-  compilation_config: '{"cudagraph_mode": "FULL_AND_PIECEWISE"}'
+  compilation_config: '{"cudagraph_mode": "PIECEWISE"}'
   reasoning_parser: kimi_k2
   enable_auto_tool_choice: true
   tool_call_parser: kimi_k2
+  speculative_config: '{"method": "eagle3", "model": "lightseekorg/kimi-k2.6-eagle3-mla", "num_speculative_tokens": 3, "attention_backend": "ROCM_AITER_MLA", "moe_backend": "auto"}'
