@@ -39,6 +39,7 @@ until curl -sf "http://localhost:${PORT}/health" >/dev/null; do
     [ "${t}" -ge "${WAIT_TIMEOUT}" ] && { echo "[run_and_bench] health timeout ${WAIT_TIMEOUT}s"; exit 1; }
 done
 echo "[run_and_bench] HEALTH OK"
+sleep 20
 
 # --- §3 bench (driver writes into RUN/results) ---
 REBENCH_RESULTS_DIR="${RUN}/results" \
@@ -82,7 +83,9 @@ PY
 # --- §6 stop ---
 case "${KEEP_SERVER}" in
     1|true|yes|on) echo "[run_and_bench] KEEP_SERVER -> server left running" ;;
-    *) kill -TERM "$(cat "${RUN}/serve.pid.txt")" 2>/dev/null; sleep 5; pkill -9 VLLM 2>/dev/null; sleep 3
+    *) kill -TERM "$(cat "${RUN}/serve.pid.txt")" 2>/dev/null; sleep 5
+       pkill -9 -f "vllm-moreh serve" 2>/dev/null   # main serve (comm=python3, pkill VLLM misses it)
+       pkill -9 VLLM 2>/dev/null; sleep 3            # engine/worker procs (comm=VLLM::*)
        echo "[run_and_bench] server stopped" ;;
 esac
 echo "[run_and_bench] -> ${RUN}/scenario_summary.csv"

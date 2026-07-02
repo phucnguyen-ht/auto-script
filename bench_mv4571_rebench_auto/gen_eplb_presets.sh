@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
-# Generate the EPLB sweep presets from the base (async only):
-#   communicator {pynccl, torch_nccl, nixl} x step {default, s250} x num_redundant {r0, r8, r16}.
-# nixl needs: UCX env (else "VRAM detected as host by UCX") + a fixed
-# kv_cache_memory_bytes (else NIXL registerMem fails). 40 GiB is MI300-safe
-# (model 107.6 + 40 + overhead < 192 GiB). No max_model_len (keep 1M).
+# Generate the VIABLE EPLB sweep presets (all verified on gpu-5 / image 260626 /
+# 1P1D; see scripts/DEBUG_ASYNC_HANG.md):
+#   nixl, torch_gloo   -> ASYNC  (transfer off the GPU NCCL group -> no deadlock)
+#   torch_nccl, pynccl -> SYNC   (their ASYNC hangs "at collective communication
+#                                 calls" per vLLM eplb_state.py:242 -- vLLM limit)
+# grid: communicator x step{default,s250} x num_redundant{r0,r8,r16} = 24 presets.
+# nixl also gets UCX env + kv_cache_memory_bytes (>=54.62 GiB for 1M ctx, else
+# engine init fails). No max_model_len (keep 1M).
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../presets/glm5.2.rebench" && pwd)"
 BASE="${DIR}/MTP5-bs64-dg.yaml"
-NIXL_KV_CACHE_BYTES="${NIXL_KV_CACHE_BYTES:-42949672960}"   # 40 GiB (MI300)
+NIXL_KV_CACHE_BYTES="${NIXL_KV_CACHE_BYTES:-64424509440}"   # 60 GiB
 
-build() {  # <label> <communicator> <step_suffix> <window_json> <red_suffix> <red_json>
-    local out="${DIR}/MTP5-bs64-dg-eplb-$1-async-$3-$5.yaml"
-    local cfg="{\"use_async\": true, \"communicator\": \"$2\"$4$6}"
+build() {  # <label> <communicator> <mode:async|sync> <step_sfx> <win_json> <red_sfx> <red_json>
+    local out="${DIR}/MTP5-bs64-dg-eplb-$1-$3-$4-$6.yaml"
+    local ua="false"; [ "$3" = async ] && ua="true"
+    local cfg="{\"use_async\": ${ua}, \"communicator\": \"$2\"$5$7}"
     local ucx=""
     [ "$2" = nixl ] && ucx="  UCX_TLS: self,sm,rc_x,rocm_copy,rocm_ipc\n  UCX_MEMTYPE_CACHE: n\n"
     awk -v ins="${ucx}" '/^parallelism_args:/ && !d {printf "%s", ins; d=1} {print}' "${BASE}" > "${out}"
@@ -20,11 +24,11 @@ build() {  # <label> <communicator> <step_suffix> <window_json> <red_suffix> <re
     echo "${out##*/}"
 }
 
-for spec in "pynccl:pynccl" "nccl:torch_nccl" "nixl:nixl"; do
-    label="${spec%%:*}"; comm="${spec#*:}"
+for spec in "nixl:nixl:async" "gloo:torch_gloo:async" "nccl:torch_nccl:sync" "pynccl:pynccl:sync"; do
+    IFS=: read -r label comm mode <<< "${spec}"
     for step in "default:" 's250:, "window_size": 250, "step_interval": 250'; do
         for red in "r0:" 'r8:, "num_redundant_experts": 8' 'r16:, "num_redundant_experts": 16'; do
-            build "${label}" "${comm}" "${step%%:*}" "${step#*:}" "${red%%:*}" "${red#*:}"
+            build "${label}" "${comm}" "${mode}" "${step%%:*}" "${step#*:}" "${red%%:*}" "${red#*:}"
         done
     done
 done

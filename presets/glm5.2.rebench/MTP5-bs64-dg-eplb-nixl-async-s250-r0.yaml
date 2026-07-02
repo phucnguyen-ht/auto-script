@@ -41,4 +41,4 @@ engine_args:
   scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
   enable_eplb: true
   eplb_config: '{"use_async": true, "communicator": "nixl", "window_size": 250, "step_interval": 250}'
-  kv_cache_memory_bytes: 42949672960
+  kv_cache_memory_bytes: 64424509440

@@ -12,33 +12,40 @@ AUTO_ROOT="$(cd "${TICKET_DIR}/.." && pwd)"
 PDIR="${AUTO_ROOT}/presets/glm5.2.rebench"
 SWEEP_ROOT="${SWEEP_ROOT:-${TICKET_DIR}/logs/sweep/$(date +%Y%m%d_%H%M%S)}"
 
-# Ordered least->most hang-prone (evidence: ../mtp_default_compare.csv, async runs).
-# default interval = safe for all; s250 makes nccl/pynccl worker-stall CRASH;
-# nixl (UCX+kv fix) is stable at every interval. Comment out tiers you don't want.
+# VIABLE configs only (verified on gpu-5 / image 260626 / 1P1D; see
+# scripts/DEBUG_ASYNC_HANG.md). nixl/gloo run ASYNC (transfer off the NCCL group);
+# nccl/pynccl run SYNC because their ASYNC hangs "at collective communication
+# calls" (vLLM eplb_state.py:242 -- unfixable framework limit). Regenerate the
+# preset files with: bash ../gen_eplb_presets.sh . Comment out lines to trim.
 PRESETS=(
-    # -- Tier 1: default interval, r0 -- all completed 72/72/72 (safest) --
-    MTP5-bs64-dg.yaml
-    MTP5-bs64-dg-eplb-nccl-async-default-r0.yaml
-    MTP5-bs64-dg-eplb-pynccl-async-default-r0.yaml
+    MTP5-bs64-dg.yaml                                    # baseline (no EPLB)
+    # -- default interval, r0 --
     MTP5-bs64-dg-eplb-nixl-async-default-r0.yaml
-    # -- Tier 2: default interval + redundancy -- interval safe; red8 ok (pynccl 1 slow run) --
-    MTP5-bs64-dg-eplb-nccl-async-default-r8.yaml
+    MTP5-bs64-dg-eplb-gloo-async-default-r0.yaml
+    MTP5-bs64-dg-eplb-nccl-sync-default-r0.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-default-r0.yaml
+    # -- default interval, redundancy r8/r16 --
     MTP5-bs64-dg-eplb-nixl-async-default-r8.yaml
-    MTP5-bs64-dg-eplb-nccl-async-default-r16.yaml
+    MTP5-bs64-dg-eplb-gloo-async-default-r8.yaml
+    MTP5-bs64-dg-eplb-nccl-sync-default-r8.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-default-r8.yaml
     MTP5-bs64-dg-eplb-nixl-async-default-r16.yaml
-    MTP5-bs64-dg-eplb-pynccl-async-default-r8.yaml
-    MTP5-bs64-dg-eplb-pynccl-async-default-r16.yaml
-    # -- Tier 3: s250 + nixl -- nixl handles dense rearrange OK (72/72/72) --
+    MTP5-bs64-dg-eplb-gloo-async-default-r16.yaml
+    MTP5-bs64-dg-eplb-nccl-sync-default-r16.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-default-r16.yaml
+    # -- s250 interval, r0/r8/r16 --
     MTP5-bs64-dg-eplb-nixl-async-s250-r0.yaml
+    MTP5-bs64-dg-eplb-gloo-async-s250-r0.yaml
+    MTP5-bs64-dg-eplb-nccl-sync-s250-r0.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-s250-r0.yaml
     MTP5-bs64-dg-eplb-nixl-async-s250-r8.yaml
+    MTP5-bs64-dg-eplb-gloo-async-s250-r8.yaml
+    MTP5-bs64-dg-eplb-nccl-sync-s250-r8.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-s250-r8.yaml
     MTP5-bs64-dg-eplb-nixl-async-s250-r16.yaml
-    # -- Tier 4: s250 + nccl/pynccl -- HANG-PRONE (compare.csv: worker-stall CRASH); last --
-    MTP5-bs64-dg-eplb-nccl-async-s250-r0.yaml
-    MTP5-bs64-dg-eplb-nccl-async-s250-r8.yaml
-    MTP5-bs64-dg-eplb-nccl-async-s250-r16.yaml
-    MTP5-bs64-dg-eplb-pynccl-async-s250-r0.yaml
-    MTP5-bs64-dg-eplb-pynccl-async-s250-r8.yaml
-    MTP5-bs64-dg-eplb-pynccl-async-s250-r16.yaml
+    MTP5-bs64-dg-eplb-gloo-async-s250-r16.yaml
+    MTP5-bs64-dg-eplb-nccl-sync-s250-r16.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-s250-r16.yaml
 )
 
 wait_gpu_free() {
