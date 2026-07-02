@@ -1,5 +1,68 @@
 # CONTEXT HANDOFF — bench_mv4571_rebench_auto (GLM-5.2 EPLB bench)
 
+> **⚠️ READ THIS FIRST — SESSION HANDOFF for the MI300 run (2026-07-02, current).**
+> The body below (§1..§7) is the ORIGINAL **MI325** handoff. This top block is the
+> **MI300** port. Blow-by-blow detail: **`scripts/progress.md`** (read it — it has every
+> step, bug, fix, and log path).
+
+## MI300 HANDOFF (current task)
+
+### Environment (differs from MI325 body below)
+- Node: **MI300, gfx942, 8× GPU, 192 GiB/GPU** (206,141,652,992 B). **NO RDMA NIC**
+  (`ibv_devices` empty) — matters for nixl. **Shared node** — colleagues' containers
+  (e.g. `thanh-nguyenxuan-glm5-dev`) run big jobs here; expect GPU contention.
+- **docker** (not podman). Container **`phuc-nguyen-mv-4571`**, image `moreh-vllm:0.23.0-260626-rc1`.
+  Repo mounted at same path: `/home/phuc-nguyen/workspaces/mv-4571-rebench/auto-script`.
+- Run one preset: `docker exec phuc-nguyen-mv-4571 bash -lc "RUN=<abs> PRESET=<abs.yaml> bash <scripts>/run_and_bench.sh"`.
+  Launch detached (survives session): add `-d` to `docker exec` OR use a background runner.
+- Workload unchanged: 100K ISL × concurrency 64 (`multi_process_test.py` `[64]×[100k]`, 240s window).
+
+### What was found on MI300 (evidence in progress.md; bench2 old logs in `logs/sweep2`)
+Same image as MI325 ⇒ the async **deadlock** for nccl/pynccl is identical ⇒ **nccl/pynccl → SYNC**
+carries over. NEW MI300-specific issues (all measured):
+1. **max_model_len=1M does NOT fit with EPLB.** Baseline auto-KV = **59.1 GiB** (fits 1M, 1.08x).
+   Enabling EPLB costs ~10 GiB (rearrange buffers): avail KV drops to **~49 GiB (r0) .. 43.1 GiB (r16)**
+   < 54.62 GiB needed for a 1M request → engine init `ValueError`. **Fix: cap `max_model_len=512K`**
+   for all EPLB presets (workload is 100K ISL, so benched requests are unaffected). Baseline keeps 1M.
+2. **nixl is NOT viable on this node (no RDMA).** With the UCX fix (`UCX_TLS` +`tcp`) nixl *inits*
+   fine, but the **first async transfer CRASHES the engine** (GPU-mem RDMA-read over tcp). On an
+   RDMA node (MI325) nixl works. ⇒ nixl is **hardware-gated** (see next).
+3. **gloo async works** (r16 probe fired 21 transfers, no crash). gloo is the async backend on MI300.
+4. Model load: 107.63 GiB (baseline) / 108.76 (r0) / 114.17 (r16, +16 redundant experts).
+
+### The final preset set (generator + values)
+`gen_eplb_presets.sh` now emits MI300-safe values (env-overridable for MI325):
+- `MAX_MODEL_LEN=524288` (512K) on ALL EPLB presets. `NIXL_KV_CACHE_BYTES=40 GiB` (fits r16;
+  nixl KV is fixed). nixl `UCX_TLS` includes `tcp`. Regenerate: `bash bench_mv4571_rebench_auto/gen_eplb_presets.sh`.
+- **MI325 (RDMA, 256 GiB)**: `MAX_MODEL_LEN= NIXL_KV_CACHE_BYTES=64424509440 bash gen_eplb_presets.sh`
+  (empty MAX_MODEL_LEN keeps 1M; 60 GiB KV for nixl).
+
+### nixl auto-check (added this session, per user request)
+`scripts/check_nixl.sh` → exit 0 if node has RDMA (nixl viable), else exit 1. `sweep_presets.sh`
+calls it and **auto-adds the 6 nixl presets only on RDMA nodes** (skipped here). Override: `NIXL_FORCE=1/0`.
+So the SAME sweep script runs nixl on the user's other (RDMA) machine and skips it here — no edits needed.
+
+### `sweep_presets.sh` — final state
+Outputs to **`logs/sweep_results/<ts>/`** (per user: final results go in `sweep_results/`, not `sweep/`).
+PRESETS = baseline(1M) + **gloo-async + nccl-sync + pynccl-sync** × {default,s250} × {r0,r8,r16}
+= **19** (+ 6 nixl auto-added iff RDMA). `wait_gpu_free` between presets (VRAM>10% ⇒ wait — good for the
+shared node). `run_and_bench.sh` §6 kills `vllm-moreh serve` + `VLLM` (container-local pkill).
+
+### STATE / WHAT'S LEFT (resume here)
+- ✅ Diagnosis done, presets + scripts finalized, nixl-check wired, docs written.
+- ⏳ **BLOCKER: GPUs 92% busy** (colleague's job) since ~21:47 — could not get a *clean* throughput run.
+  Contaminated runs: `logs/mi300_probe/gloo-async-default-r0-512k` (stuck in cudagraph @100s/graph = contention).
+- **TODO when GPUs free** (`rocm-smi --showmemuse` all <~10%):
+  1. Clean confirm ONE gloo run: `RUN=.../mi300_probe/confirm-gloo-r0 PRESET=.../MTP5-bs64-dg-eplb-gloo-async-default-r0.yaml bash .../run_and_bench.sh`
+     — expect ~hundreds of req, prefix ~99% (like baseline 510 req / p50_tpot 21.86). Also confirm one `pynccl-sync-default-r0`.
+  2. Launch full sweep detached:
+     `docker exec -d phuc-nguyen-mv-4571 bash -lc 'SWEEP_ROOT=<abs>/logs/sweep_results/<ts> bash <scripts>/sweep_presets.sh > <that>/sweep.log 2>&1'`
+     then `tail -f .../sweep.log` (done at `[sweep] DONE`). Per-preset: `<ts>/<preset>/scenario_summary.csv`.
+- Stop a stuck run: `docker exec phuc-nguyen-mv-4571 bash -lc 'pkill -f sweep_presets; pkill -f run_and_bench; pkill -9 -f "vllm-moreh serve"; pkill -9 VLLM'`.
+- Verified-good reference: baseline on MI300 = `logs/sweep2/20260702_172743/MTP5-bs64-dg/` (510 req, p50_tpot 21.86).
+
+---
+
 Full context to resume in a new session. Repo:
 `/shared/amdgpu/home/loc_tran_ce6/phucnguyen/mv-4571/auto-script` (branch `main`).
 Ticket dir: `bench_mv4571_rebench_auto/`. Companion doc with the debug detail +

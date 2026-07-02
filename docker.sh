@@ -1,4 +1,4 @@
-WORKING_DIR=/home/phuc-nguyen/workspaces/mv-4571
+WORKING_DIR=/home/phuc-nguyen/workspaces/mv-4571-rebench
 CONTAINER_NAME=phuc-nguyen-mv-4571
 SETUP_DEV=${SETUP_DEV:-0}
 
@@ -21,7 +21,7 @@ if [ -x "$VLLM_MOREH_DIR/scripts/utils/get_vllm_version.sh" ]; then
     ( cd "$VLLM_MOREH_DIR" && VLLM_VERSION="$VLLM_VERSION" envsubst '$VLLM_VERSION' < .env.example > .env )
   fi
 fi
-DEV_IMAGE="255250787067.dkr.ecr.ap-northeast-2.amazonaws.com/unencrypted/moreh-vllm:0.23.0-260622-rc1"
+DEV_IMAGE="255250787067.dkr.ecr.ap-northeast-2.amazonaws.com/unencrypted/moreh-vllm:0.23.0-260626-rc1"
 echo "Using dev image: $DEV_IMAGE"
 
 docker run -d \
@@ -33,7 +33,6 @@ docker run -d \
   -v /home/phuc-nguyen/.claude:/root/.claude \
   -v $WORKING_DIR:$WORKING_DIR \
   -w $WORKING_DIR \
-  -e AITER_MOREH_ROOT_DIR=$WORKING_DIR/vllm-moreh/src/aiter_moreh \
   --name $CONTAINER_NAME \
   --entrypoint bash \
   "$DEV_IMAGE" \

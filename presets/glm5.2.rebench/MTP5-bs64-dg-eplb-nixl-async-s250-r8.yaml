@@ -19,7 +19,7 @@ env_vars:
   VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
   VLLM_MOREH_USE_PD_SEPARATION: '1'
   VLLM_SERVER_DEV_MODE: '1'
-  UCX_TLS: self,sm,rc_x,rocm_copy,rocm_ipc
+  UCX_TLS: tcp,self,sm,rc_x,rocm_copy,rocm_ipc
   UCX_MEMTYPE_CACHE: n
 parallelism_args:
   tensor_parallel_size: 1
@@ -41,4 +41,5 @@ engine_args:
   scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
   enable_eplb: true
   eplb_config: '{"use_async": true, "communicator": "nixl", "window_size": 250, "step_interval": 250, "num_redundant_experts": 8}'
-  kv_cache_memory_bytes: 64424509440
+  max_model_len: 524288
+  kv_cache_memory_bytes: 42949672960
