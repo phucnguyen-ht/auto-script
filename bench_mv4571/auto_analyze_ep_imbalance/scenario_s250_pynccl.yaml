@@ -1,0 +1,8 @@
+defaults: { dataset_dir: /remote/vast0/share-mv/longbenchv2-custom, prompts_per_concurrency: 2, num_prompts_floor: 1, num_prompts_cap: 256 }
+models:
+  glm5.2:
+    model_path: /remote/vast0/share-mv/zai-org/GLM-5.2-FP8
+    presets:
+      - glm5.2/dp8ep8/MTP5-bs64-dg-eplb-async-s250-pynccl.yaml
+cases:
+  - { model: glm5.2, name: 10k, osl: 500, rates: ["inf"], concurrencies: [36] }

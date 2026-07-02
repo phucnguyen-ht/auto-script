@@ -1,0 +1,36 @@
+env_vars:
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_MOREH_USE_CUSTOM_ATTN_BACKEND: '1'
+  VLLM_ROCM_QUICK_REDUCE_QUANTIZATION: INT4
+  VLLM_MOREH_DSA_USE_PAGED_MQA_LOGITS_2STAGES: '0'
+  VLLM_MOREH_USE_FUSED_TOPK_INDEXER_LOGITS: '0'
+  VLLM_MOREH_INDEXER_M_SPLIT: '1'
+  VLLM_MOREH_USE_CUSTOM_PAGED_MQA_LOGITS: '0'
+  VLLM_MOREH_USE_CUSTOM_FP8_MQA_LOGITS: '1'
+  VLLM_MOREH_USE_CP_GATHER_INDEXER_K_QUANT_CACHE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: '1'
+  VLLM_MOREH_IS_DECODE_WORKER: both
+  VLLM_MOREH_USE_AITER_PREFILL_FAST: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '36000'
+  VLLM_MOREH_EP_LOG: '1' # MV-4571: log per-(rank,layer,step) topk_ids histogram before all2all (see fp8.py::_ep_collect_log)
+  VLLM_MOREH_EP_LOG_DEBUG: '0' # MV-4571: log per-(rank,layer,step) topk_ids histogram before all2all (see fp8.py::_ep_collect_log)
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  enable_prefix_caching: false # MV-4571: no prefix caching (== --no-enable-prefix-caching); every conc measured cold
+  gpu_memory_utilization: 0.88
+  block_size: 64
+  attention_backend: ROCM_AITER_MLA_SPARSE
+  quantization: fp8_per_block_to_per_token_for_glm5
+  kv_cache_dtype: fp8_e4m3
+  reasoning_parser: glm45
+  enable_auto_tool_choice: true
+  tool_call_parser: glm47
+  enforce_eager: true
+  compilation_config: '{"custom_ops": ["+rotary_embedding"], "cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 36, 52]}'
+  max_model_len: 16384
+  kv_cache_memory_bytes: 42949672960

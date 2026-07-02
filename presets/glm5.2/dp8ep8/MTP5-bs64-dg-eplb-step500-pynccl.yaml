@@ -1,0 +1,37 @@
+# !!! This preset is generated - do not edit manually. Edit the generate_presets.py script instead
+env_vars:
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_MOREH_USE_CUSTOM_ATTN_BACKEND: '1'
+  VLLM_ROCM_QUICK_REDUCE_QUANTIZATION: INT4
+  VLLM_MOREH_DSA_USE_PAGED_MQA_LOGITS_2STAGES: '0'
+  VLLM_MOREH_USE_FUSED_TOPK_INDEXER_LOGITS: '0'
+  VLLM_MOREH_INDEXER_M_SPLIT: '1'
+  VLLM_MOREH_USE_CUSTOM_PAGED_MQA_LOGITS: '0'
+  VLLM_MOREH_USE_CUSTOM_FP8_MQA_LOGITS: '1'
+  VLLM_MOREH_USE_CP_GATHER_INDEXER_K_QUANT_CACHE: '1'
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_USE_V2_MODEL_RUNNER: '1'
+  VLLM_MOREH_IS_DECODE_WORKER: both
+  VLLM_MOREH_USE_AITER_PREFILL_FAST: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '3600'
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  gpu_memory_utilization: 0.9
+  block_size: 64
+  attention_backend: ROCM_AITER_MLA_SPARSE
+  quantization: fp8_per_block_to_per_token_for_glm5
+  kv_cache_dtype: fp8_e4m3
+  reasoning_parser: glm45
+  enable_auto_tool_choice: true
+  tool_call_parser: glm47
+  max_num_seqs: '256'
+  speculative_config: '{"method": "mtp", "num_speculative_tokens": 5, "attention_backend": "ROCM_AITER_MLA_SPARSE"}'
+  compilation_config: '{"custom_ops": ["+rotary_embedding"], "cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 102, 108, 114, 120, 126, 132, 138, 144, 150, 156, 162, 168, 174, 180, 186, 192, 216, 312]}'
+  # --- EPLB step500 (less frequent rearrange, stability) ---
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "pynccl", "window_size": 500, "step_interval": 500}'

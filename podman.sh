@@ -1,6 +1,6 @@
-IMAGE="255250787067.dkr.ecr.ap-northeast-2.amazonaws.com/unencrypted/moreh-vllm:0.17.0-260422-dccf357-hsa"
-WORKING_DIR="/shared/amdgpu/home/loc_tran_ce6/phucnguyen"
-CONTAINER_NAME="phuc-nguyen"
+IMAGE="255250787067.dkr.ecr.ap-northeast-2.amazonaws.com/unencrypted/moreh-vllm:0.23.0-260626-rc1"
+WORKING_DIR="/shared/amdgpu/home/loc_tran_ce6/phucnguyen/mv-4571"
+CONTAINER_NAME="phuc-nguyen-mv4571-rebench"
 SETUP_DEV=${SETUP_DEV:-0}
 
 if [ "$SETUP_DEV" = "1" ] && [ ! -d "$WORKING_DIR/vllm-moreh" ]; then

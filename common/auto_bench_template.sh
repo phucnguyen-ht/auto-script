@@ -28,6 +28,9 @@ resolve_backend
 resolve_preset
 resolve_model_path
 AUTO_SERVE="${AUTO_SERVE:-1}"
+# AUTO_CLEAN (default 1 = original behavior): do pre-serve hygiene (GPU-free wait +
+# stale-server kill). A ticket may set AUTO_CLEAN=0 to mirror a bare serve.sh.
+AUTO_CLEAN="${AUTO_CLEAN:-1}"
 
 m="$(yaml_get ".${MODE}.method")"
 [ "${m}" = "${METHOD}" ] || { echo "[${MODE}] method='${m:-<unset>}' != '${METHOD}'; skipping." >&2; exit 0; }
@@ -55,8 +58,7 @@ if is_enabled "${AUTO_SERVE}"; then
     else
         cp -f "${PRESET_YAML}" "${served}"
     fi
-    wait_for_gpu_free
-    kill_server
+    if is_enabled "${AUTO_CLEAN}"; then wait_for_gpu_free; kill_server; fi
     PRESET_YAML="${served}" serve_backend "${RUN_DIR}/serve.log"
     wait_for_server || { echo "[ERROR] server failed to start." >&2; exit 1; }
 fi

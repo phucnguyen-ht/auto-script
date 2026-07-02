@@ -72,7 +72,9 @@ TRACE_WAIT_TIMEOUT="${TRACE_WAIT_TIMEOUT:-900}"   # giây chờ đủ 8 trace fl
 EXPECT_RANKS="${EXPECT_RANKS:-8}"                 # số worker trace mong đợi (= dp size)
 SERVER_WAIT_TIMEOUT="${SERVER_WAIT_TIMEOUT:-3600}"  # giây chờ /health TỐI ĐA (giảm 7200->3600)
 SERVE_HEARTBEAT="${SERVE_HEARTBEAT:-600}"         # giây giữa 2 dòng log "đang chờ" (heartbeat)
-SERVE_ATTEMPTS="${SERVE_ATTEMPTS:-2}"             # serve tối đa N lần (1 lần đầu + retry); fail-fast nếu serve.log có lỗi
+SERVE_ATTEMPTS="${SERVE_ATTEMPTS:-2}"             # serve tối đa N lần (1 lần đầu + retry). KHÔNG còn fail-fast
+                                                  # theo pattern lỗi; 1 attempt "fail" chỉ khi process chết hẳn/timeout.
+                                                  # Đặt SERVE_ATTEMPTS=1 nếu muốn crash 1 lần rồi dừng (vd demo pure-eplb).
 API_SERVER_COUNT_PROFILE="${API_SERVER_COUNT_PROFILE:-}"  # RỖNG = KHÔNG đụng preset (api_server_count mặc định = dp).
                                                           # Đặt =1 nếu muốn /start+/stop về cùng 1 frontend (tránh deadlock /stop_profile, log sạch).
 PYTHON="${PYTHON:-python3}"
@@ -144,22 +146,17 @@ patch_time_preset() {  # <base> <out> <trace_dir>
     fi
 }
 
-# --- chờ server lên HOẶC fail-fast nếu serve.log có lỗi ---
-# Poll /health; mỗi nhịp QUÉT serve.log tìm dấu hiệu crash (Traceback/assertion/NCCL broken
-# pipe/worker chết...) -> thấy là DỪNG NGAY (return 1) thay vì chờ hết timeout. Heartbeat mỗi
-# SERVE_HEARTBEAT giây. Tối đa SERVER_WAIT_TIMEOUT giây.
-SERVE_FATAL_RE='Engine core initialization failed|Worker failed with error|BrokenPipeError|Traceback \(most recent call last\)|AssertionError|RuntimeError:|c10::Error|CUDA error|HIP error|Address already in use|EngineDeadError|EngineCore failed to start|ProcessGroupNCCL.*(Broken pipe|shut down)|multiproc_executor\.py.*\] ERROR'
+# --- chờ server lên (ĐÃ BỎ fail-fast theo pattern lỗi trong log) ---
+# Poll /health tới khi READY, HOẶC tiến trình serve/EngineCore chết hẳn, HOẶC hết timeout.
+# KHÔNG còn quét serve.log tìm Traceback/assertion để dừng sớm: để serve chạy tới lúc crash tự
+# nhiên, log crash được ghi ĐẦY ĐỦ (mọi DP worker); chỉ dừng chờ khi process thật sự biến mất
+# hoặc timeout. Heartbeat mỗi SERVE_HEARTBEAT giây. Tối đa SERVER_WAIT_TIMEOUT giây.
 wait_serve_or_fail() {  # <serve_log> ; 0=healthy, 1=fail/timeout
     local log="$1" timeout="${SERVER_WAIT_TIMEOUT:-3600}" hb="${SERVE_HEARTBEAT:-600}" t=0
     echo "  [wait] poll ${BASE_URL}/health (timeout ${timeout}s, heartbeat ${hb}s)..."
     while (( t < timeout )); do
         if curl -sf "${BASE_URL}/health" >/dev/null 2>&1; then
             echo "  [wait] server READY sau ${t}s."; return 0
-        fi
-        if [ -f "${log}" ] && grep -qE "${SERVE_FATAL_RE}" "${log}" 2>/dev/null; then
-            echo "  [wait][FAIL] phát hiện lỗi serve trong ${log} (sau ${t}s):" >&2
-            grep -nE "${SERVE_FATAL_RE}" "${log}" 2>/dev/null | tail -3 >&2
-            return 1
         fi
         # engine chết hẳn (sau 90s mà không còn EngineCore/vllm serve nào) -> fail luôn
         if (( t >= 90 )) && ! pgrep -f "VLLM::EngineCore|bin/vllm serve" >/dev/null 2>&1; then
@@ -261,7 +258,7 @@ do_token_phase() {  # <out_dir> <base_preset> <label> <model_path> <dpath> <osl>
 # ---------- 1 phase TIME: serve(cudagraph/enforce_eager=false,profiler,frontend ON) -> bench --profile -> wait traces -> analyze ----------
 do_time_phase() {  # <out_dir> <base_preset> <label> <model_path> <dpath> <osl> <conc> <rate>
     local out="$1" base="$2" label="$3" model="$4" dpath="$5" osl="$6" conc="$7" rate="$8"
-    local np; np="$(clamp "${conc}" "${NP_FLOOR}" "${NP_CAP}")"           # profile: ppc LUÔN = 1
+    local np; np="$(clamp $(( ${PROFILE_NP_SCALE:-1} * conc )) "${NP_FLOOR}" "${NP_CAP}")"   # profile: ppc = PROFILE_NP_SCALE (mặc định 1; =2 để np khớp bench)
     echo "  --- [TIME] serve(enforce_eager=false,profiler,api_server_count=${API_SERVER_COUNT_PROFILE:-preset}) -> bench --profile(np=${np}) -> wait ${EXPECT_RANKS} trace -> analyze ---"
     local trace="${out}/traces"; mkdir -p "${trace}"
     local preset="${out}/preset.yaml"; patch_time_preset "${base}" "${preset}" "${trace}"

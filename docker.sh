@@ -21,6 +21,7 @@ if [ -x "$VLLM_MOREH_DIR/scripts/utils/get_vllm_version.sh" ]; then
     ( cd "$VLLM_MOREH_DIR" && VLLM_VERSION="$VLLM_VERSION" envsubst '$VLLM_VERSION' < .env.example > .env )
   fi
 fi
+DEV_IMAGE="255250787067.dkr.ecr.ap-northeast-2.amazonaws.com/unencrypted/moreh-vllm:0.23.0-260622-rc1"
 echo "Using dev image: $DEV_IMAGE"
 
 docker run -d \

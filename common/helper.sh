@@ -203,10 +203,27 @@ wait_for_gpu_free() {
     done
 }
 
+# wait_for_server — poll /health until ready or timeout. With SERVER_ERROR_DETECT=1
+# (default) also aborts early (return 1) if the server process died (SERVER_PID) or
+# its log (SERVER_LOG) matches SERVER_FATAL_RE — so a doomed preset frees the GPUs
+# fast instead of waiting out SERVER_WAIT_TIMEOUT.
 wait_for_server() {
-    local max_wait="${SERVER_WAIT_TIMEOUT:-7200}" elapsed=0
+    local max_wait="${SERVER_WAIT_TIMEOUT:-3600}" elapsed=0
+    local detect="${SERVER_ERROR_DETECT:-1}" re="${SERVER_FATAL_RE:-}"
     echo "[wait] Polling ${BASE_URL}/health (timeout: ${max_wait}s)..."
     while ! curl -sf "${BASE_URL}/health" >/dev/null 2>&1; do
+        if is_enabled "${detect}"; then
+            if [ -n "${SERVER_PID:-}" ] && ! kill -0 "${SERVER_PID}" 2>/dev/null; then
+                echo "[wait][ERROR] server process ${SERVER_PID} exited before healthy"
+                [ -f "${SERVER_LOG:-}" ] && tail -n "${SERVER_ERROR_TAIL:-40}" "${SERVER_LOG}"
+                return 1
+            fi
+            if [ -n "${re}" ] && [ -f "${SERVER_LOG:-}" ] && grep -qEi "${re}" "${SERVER_LOG}"; then
+                echo "[wait][ERROR] fatal pattern in ${SERVER_LOG}:"
+                grep -EiInm3 "${re}" "${SERVER_LOG}"
+                return 1
+            fi
+        fi
         sleep 10; elapsed=$((elapsed + 10))
         if [ "${elapsed}" -ge "${max_wait}" ]; then
             echo "[ERROR] Server did not respond within ${max_wait}s"; return 1
@@ -319,16 +336,26 @@ harvest_profiles() {
 # PRESET_YAML; sglang uses serve_sglang_ds3.2.sh.
 serve_backend() {
     local log="$1"
+    local -a launch
     if [ "${BACKEND,,}" = "sglang" ]; then
         [ -f "${SERVE_SGLANG_SH}" ] || { echo "[ERROR] SERVE_SGLANG_SH not set/found: '${SERVE_SGLANG_SH}'" >&2; exit 1; }
         echo "[serve] SGLang (model: ${MODEL_PATH}, port: ${SERVER_PORT}) -> ${log}"
-        (SGLANG_PORT="${SERVER_PORT}" bash "${SERVE_SGLANG_SH}" "${MODEL_PATH}") >"${log}" 2>&1 &
+        launch=(env "SGLANG_PORT=${SERVER_PORT}" bash "${SERVE_SGLANG_SH}" "${MODEL_PATH}")
     else
         echo "[serve] vLLM (preset: ${PRESET_YAML}) -> ${log}"
         # Snapshot the exact preset served (incl. profiler/eager-injected copies)
         # beside the serve log so each run records its config.
         cp -f "${PRESET_YAML}" "$(dirname "${log}")/preset.yaml" 2>/dev/null || true
-        (bash "${SERVE_SH}" "${MODEL_PATH}" "${PRESET_YAML}") >"${log}" 2>&1 &
+        launch=(bash "${SERVE_SH}" "${MODEL_PATH}" "${PRESET_YAML}")
     fi
-    echo "[serve] PID: $!"
+    # SERVE_TEE=1 pipes stdout through tee (to this shell's stdout + the log),
+    # mirroring serve_glm5.sh -- adds logging backpressure (fatter tpot tail when
+    # stdout is a slow terminal). Default 0 = direct file redirect (original).
+    if is_enabled "${SERVE_TEE:-0}"; then
+        "${launch[@]}" > >(tee "${log}") 2>&1 &
+    else
+        "${launch[@]}" >"${log}" 2>&1 &
+    fi
+    export SERVER_PID="$!" SERVER_LOG="${log}"   # for wait_for_server early-abort
+    echo "[serve] PID: ${SERVER_PID}"
 }

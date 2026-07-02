@@ -1,0 +1,17 @@
+async,interval,config,time_imbalance,mean_tpot_ms,std_tpot_ms,completed,note
+async_true,default,baseline,1.359,43.7,7.3,72/72/72,baseline MTP5
+async_true,default,nixl,1.340,45.2,4.2,72/72/72,
+async_true,default,nccl,1.330,48.4,1.5,72/72/72,
+async_true,default,pynccl,1.356,48.3,2.9,72/72/72,
+async_true,freq_100/100,nixl,1.315,47.9,7.4,72/72/72,
+async_true,freq_100/100,nccl,1.341,CRASH,CRASH,68/0/0,CRASH: RPC 'sample_tokens' timed out 
+async_true,freq_100/100,pynccl,_,CRASH,CRASH,36/0/0,CRASH: RPC 'sample_tokens' timed out
+async_true,default_red8,nixl,1.321,52.8,9.1,72/72/72,redundant=8 (num_physical=264)
+async_true,default_red8,nccl,1.280,60.1,3.0,72/72/72,redundant=8
+async_true,default_red8,pynccl,1.317,48.9,13.0,72/72/36,redundant=8; 1 run chỉ 36/72 (timeout/chậm)
+async_true,s250_250/250,nixl,1.306,47.2,4.7,72/72/72,interval nhỏ → rearrange NỔ ngay trong profile (1 lần); imbalance ↓ (1.34→1.31) nhưng tpot vẫn > default
+async_true,s250_250/250,nccl,1.321,CRASH,CRASH,72/0/0,CRASH: worker-stall (250 vẫn đủ dày để nccl sập như freq)
+async_true,s250_250/250,pynccl,_,CRASH,CRASH,36/0/0,CRASH: profile+bench đều crash (worker-stall)
+async_false,default,nccl,_,50.4,5.5,72/72/72,
+async_false,default,pynccl,_,47.2,3.9,72/72/72,
+async_false,default,nixl,_,55.9,21.2,72/72/72,variance cao: 1 run dính 38s rearrange NIXL sync
