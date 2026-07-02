@@ -97,12 +97,17 @@ All viable runs: no RPC timeout, no worker death, prefix ~99.5%, §6 cleanup OK.
 - Docs: `scripts/DEBUG_ASYNC_HANG.md` (step-by-step + root cause + code + result links),
   this `scripts/CONTEXT_HANDOFF.md`.
 
-## 6. NEXT STEPS (not yet done)
-- **Run the full sweep** to prove all 25 end-to-end (each ~12-14 min → ~5h total):
-  `ssh gpu-5 "podman exec phuc-nguyen-mv4571-rebench bash -lc 'bash <ticket>/scripts/sweep_presets.sh'"`.
-  (A chained multi-preset run was NOT completed — a prior session was interrupted. The 3
-  viable modes are each verified individually; the sweep just chains them, freeing GPU
-  between via `wait_gpu_free` + the §6 fix.)
+## 6. FULL SWEEP — LAUNCHED & RUNNING
+Launched detached on gpu-5 (survives sessions):
+`SWEEP_ROOT=logs/sweep/fullsweep_20260702_151319` (log: `${SWEEP_ROOT}/sweep.log`).
+Command used: `ssh gpu-5 "podman exec -d phuc-nguyen-mv4571-rebench bash -lc 'SWEEP_ROOT=<...> bash <ticket>/scripts/sweep_presets.sh > <...>/sweep.log 2>&1'"`
+(**note `podman exec -d`** — plain `nohup &` inside `podman exec` gets reaped when the
+exec session ends; `-d` detaches properly.)
+- 25 presets, ~12-14 min each → ~5-6h total. Per-preset results:
+  `${SWEEP_ROOT}/<preset>/scenario_summary.csv`.
+- Check progress: `tail -f ${SWEEP_ROOT}/sweep.log`; done when it prints `[sweep] DONE`.
+- Re-launch after a stop the same way (fresh SWEEP_ROOT). To stop:
+  `podman exec phuc-nguyen-mv4571-rebench bash -lc 'pkill -f sweep_presets; pkill -f run_and_bench; pkill -9 -f "vllm-moreh serve"; pkill -9 VLLM'`.
 - nccl/pynccl **async** is intentionally excluded (unfixable). If someone insists on async
   for them, expect the RPC-timeout hang documented above.
 
