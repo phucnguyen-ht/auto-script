@@ -39,6 +39,11 @@ PRESETS=(
     MTP5-bs64-dg-eplb-pynccl-async-s250-r0.yaml
     MTP5-bs64-dg-eplb-pynccl-async-s250-r8.yaml
     MTP5-bs64-dg-eplb-pynccl-async-s250-r16.yaml
+
+    # -- Tier 5: s250 + nccl/pynccl -- HANG-PRONE (compare.csv: worker-stall CRASH); last --
+    MTP5-bs64-dg-eplb-nccl-async-s500-r0.yaml
+    MTP5-bs64-dg-eplb-pynccl-async-s500-r0.yaml
+    MTP5-bs64-dg-eplb-nixl-async-s500-r0.yaml
 )
 
 wait_gpu_free() {
