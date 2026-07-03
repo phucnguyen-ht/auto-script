@@ -24,15 +24,31 @@ NIXL_KV_CACHE_BYTES="${NIXL_KV_CACHE_BYTES:-42949672960}"   # 40 GiB (MI300-safe
 # requests). Value must fit the heaviest case (r16, least KV). Empty -> keep 1M.
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-524288}"   # 512K (fits r0/r8/r16 on MI300; >=5x the 100K workload)
 
+# Optional balancedness logging: measures how evenly EPLB spreads load (rank 0 logs
+# avg_tokens/max_tokens/balancedness every N steps). OFF by default (adds an all_reduce
+# every N steps -> slight throughput skew). Enable BOTH fields via LOG_BALANCEDNESS=1.
+LOG_BALANCEDNESS="${LOG_BALANCEDNESS:-0}"
+LOG_BALANCEDNESS_INTERVAL="${LOG_BALANCEDNESS_INTERVAL:-50}"
+
+# UCX transports for nixl. Default DROPS rc_x (InfiniBand RC): on mi300-7,
+# registering ROCm VRAM with the mlx5 NIC (GPUDirect-RDMA via ibv_reg_mr) fails
+# with "Bad address"/NIXL_ERR_BACKEND (no working amdgpu<->mlx5 peermem/dmabuf).
+# Verified: rocm_ipc-only registration succeeds (scripts/nixl_probe.py). Intra-node
+# EP uses rocm_ipc over xGMI, so IB is not needed. For a MULTI-NODE deployment with
+# working GPUDirect-RDMA, override e.g. UCX_TLS_VAL=tcp,self,sm,rc_x,rocm_copy,rocm_ipc.
+UCX_TLS_VAL="${UCX_TLS_VAL:-tcp,self,sm,rocm_copy,rocm_ipc}"
+
 build() {  # <label> <communicator> <mode:async|sync> <step_sfx> <win_json> <red_sfx> <red_json>
     local out="${DIR}/MTP5-bs64-dg-eplb-$1-$3-$4-$6.yaml"
     local ua="false"; [ "$3" = async ] && ua="true"
-    local cfg="{\"use_async\": ${ua}, \"communicator\": \"$2\"$5$7}"
+    local lb=""
+    [ "${LOG_BALANCEDNESS}" = 1 ] && lb=", \"log_balancedness\": true, \"log_balancedness_interval\": ${LOG_BALANCEDNESS_INTERVAL}"
+    local cfg="{\"use_async\": ${ua}, \"communicator\": \"$2\"$5$7${lb}}"
     local ucx=""
     # tcp is REQUIRED on nodes without RDMA NICs (MI300 tw031: ibv_devices empty ->
     # no rc_x -> UCX has no active-message transport -> NIXL_ERR_BACKEND). tcp is a
     # harmless universal fallback on RDMA nodes too (UCX still prefers rc_x there).
-    [ "$2" = nixl ] && ucx="  UCX_TLS: tcp,self,sm,rc_x,rocm_copy,rocm_ipc\n  UCX_MEMTYPE_CACHE: n\n"
+    [ "$2" = nixl ] && ucx="  UCX_TLS: ${UCX_TLS_VAL}\n  UCX_MEMTYPE_CACHE: n\n"
     awk -v ins="${ucx}" '/^parallelism_args:/ && !d {printf "%s", ins; d=1} {print}' "${BASE}" > "${out}"
     printf '  enable_eplb: true\n  eplb_config: %s\n' "'${cfg}'" >> "${out}"
     [ -n "${MAX_MODEL_LEN}" ] && printf '  max_model_len: %s\n' "${MAX_MODEL_LEN}" >> "${out}"

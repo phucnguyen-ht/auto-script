@@ -130,7 +130,12 @@ RESULTS_DIR = os.environ.get("REBENCH_RESULTS_DIR") or os.path.join(_HERE, "resu
 # Benches no longer warm up individually: warmup is done once per dataset (see
 # run_warmup + the dataset-outer loop in __main__), so the per-concurrency
 # benches just run the formal test against the already-warmed server.
-base_command = f"python3 {unit_test_path} --time_limit 240 --ignore_time_start 20 --ignore_time_end 20"
+# Adaptive prompt count: run_and_bench.sh reads the server's GPU KV cache size and
+# exports REBENCH_KV_TOKENS; the driver forwards it so unit_test.py keeps prefix
+# cache ~100% (num_prompts = floor(KV/ISL)-1). Empty/unset -> fixed slices.
+_KV_TOKENS = os.environ.get("REBENCH_KV_TOKENS", "").strip()
+_KV_ARG = f" --kv_cache_tokens {_KV_TOKENS}" if _KV_TOKENS.isdigit() else ""
+base_command = f"python3 {unit_test_path} --time_limit 240 --ignore_time_start 20 --ignore_time_end 20{_KV_ARG}"
 
 def run_warmup(port, dataset):
     """(Re-)warm the server for a dataset before a bench.
@@ -150,7 +155,7 @@ def run_warmup(port, dataset):
     command = (f"python3 {unit_test_path} --warmup_only --parallel_threads 1 "
                f"--time_limit 1 --data_path {data_path} "
                f"--log_file_name {log_file_name} --port {port} "
-               f"--encoding_size {encoding_size} --output_path {output_path}")
+               f"--encoding_size {encoding_size} --output_path {output_path}{_KV_ARG}")
     print(f"[Warmup] dataset {dataset} on port {port} (re-warm before bench)")
     subprocess.run(command, shell=True)
 

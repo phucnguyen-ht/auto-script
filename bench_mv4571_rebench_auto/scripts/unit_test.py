@@ -497,7 +497,7 @@ def log_writer(log_queue: queue.Queue, stop_event: threading.Event, output_path:
 
 
         
-def main(parallel_threads: int, time_limit: float, ignore_time_start: float, ignore_time_end: float, data_path: str, output_path: str, log_file_name: str, port: int, encoding_size: int, cache_warmup: bool = False, warmup_only: bool = False):
+def main(parallel_threads: int, time_limit: float, ignore_time_start: float, ignore_time_end: float, data_path: str, output_path: str, log_file_name: str, port: int, encoding_size: int, cache_warmup: bool = False, warmup_only: bool = False, kv_cache_tokens: int = 0):
     # 8k dataset (encoding_size == 8192) -> 1024 output tokens, else 500,
     # matching benchmark/bench_kimi26_dp8_moe_ep8.sh.
     global OUTPUT_LEN
@@ -507,11 +507,21 @@ def main(parallel_threads: int, time_limit: float, ignore_time_start: float, ign
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     data = load_data(data_path)
-    if encoding_size < 100000:
+    if kv_cache_tokens > 0 and encoding_size > 0:
+        # Adaptive: keep ALL distinct prefixes resident so prefix cache ~100%
+        # (so TPOT is not dominated by TTFT re-prefill). X = floor(KV/ISL) - 1;
+        # the -1 reserves ~1 ISL of headroom for the concurrent decode working set.
+        # EPLB shrinks the KV cache, so a fixed slice (e.g. 10 for 100k, tuned for
+        # baseline's 1.13M-token KV) would overflow the smaller KV -> prefix thrash.
+        adaptive_x = max(1, kv_cache_tokens // encoding_size - 1)
+        data = data[:adaptive_x]
+        print(f"[Config] adaptive num_prompts={adaptive_x} "
+              f"(kv_cache_tokens={kv_cache_tokens}, ISL={encoding_size})")
+    elif encoding_size < 100000:
         data = data[:100]
-    if encoding_size == 100000:
+    elif encoding_size == 100000:
         data = data[:10]
-    if encoding_size == 1000000:
+    elif encoding_size == 1000000:
         data = data[:1]
 
     if cache_warmup or warmup_only:
@@ -720,5 +730,6 @@ if __name__ == "__main__":
     parser.add_argument('--encoding_size', type=int, help='Encoding average size', default=1024)
     parser.add_argument('--cache_warmup', action='store_true', help='Enable cache warmup phase before formal testing')
     parser.add_argument('--warmup_only', action='store_true', help='Only run the warmup phase for the dataset, then exit (no formal test, no markers)')
+    parser.add_argument('--kv_cache_tokens', type=int, default=0, help='If >0, adaptively set num prompts = floor(kv_cache_tokens/ISL)-1 so prefix cache stays ~100% (overrides the fixed slices; needed because EPLB shrinks the KV cache).')
     args = parser.parse_args()
-    main(args.parallel_threads, args.time_limit, args.ignore_time_start, args.ignore_time_end, args.data_path, args.output_path, args.log_file_name, args.port, args.encoding_size, args.cache_warmup, args.warmup_only)
+    main(args.parallel_threads, args.time_limit, args.ignore_time_start, args.ignore_time_end, args.data_path, args.output_path, args.log_file_name, args.port, args.encoding_size, args.cache_warmup, args.warmup_only, args.kv_cache_tokens)

@@ -41,6 +41,18 @@ done
 echo "[run_and_bench] HEALTH OK"
 sleep 20
 
+# --- adaptive prompt count: read the server's KV cache size (tokens) so the driver
+# keeps prefix cache ~100% (num_prompts = floor(KV/ISL) - 1). EPLB shrinks the KV
+# cache, so a fixed prompt slice would overflow it -> prefix thrash -> TTFT dominates
+# TPOT. Take the MIN across DP ranks to be safe. ---
+KV_TOK=$(grep -aoE 'GPU KV cache size: [0-9,]+ tokens' "${RUN}/serve.log" 2>/dev/null | grep -oE '[0-9,]+' | tr -d ',' | sort -n | head -1)
+if [ -n "${KV_TOK}" ]; then
+    export REBENCH_KV_TOKENS="${KV_TOK}"
+    echo "[run_and_bench] server KV cache = ${KV_TOK} tokens -> REBENCH_KV_TOKENS (adaptive prompt count)"
+else
+    echo "[run_and_bench] WARN: could not read KV cache size from serve.log; using fixed prompt slice"
+fi
+
 # --- §3 bench (driver writes into RUN/results) ---
 REBENCH_RESULTS_DIR="${RUN}/results" \
     nohup python3 -u "${SCRIPT_DIR}/multi_process_test.py" > "${RUN}/mpt_run.log" 2>&1 &

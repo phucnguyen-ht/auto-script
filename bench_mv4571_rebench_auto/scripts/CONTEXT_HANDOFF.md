@@ -187,3 +187,14 @@ exec session ends; `-d` detaches properly.)
   `multi_process_test.py` for tighter stats if needed.
 - To debug the framework further: `bash scripts/recreate_container.sh` on gpu-5 → editable
   `bench_mv4571_rebench_auto/vllm_src/{vllm,vllm_moreh}` mounted into a `-dev` container.
+
+- **vLLM says so explicitly** (definitive): `config/parallel.py:918-924` auto-select comment:
+  *"Avoid torch_nccl: NCCL is fundamentally incompatible with async EPLB due to multi-stream
+  conflicts, and batched isend/irecv hangs under high load. See
+  https://github.com/pytorch/pytorch/issues/174288. Prefer nixl … fall back to torch_gloo."*
+  Docstring `parallel.py:96`: default None → *"torch_gloo for async, torch_nccl for sync"*.
+  So DEFAULT (`communicator=None`, `use_async=True`) NEVER picks torch_nccl/pynccl — our failing
+  presets FORCED that combo. Also `eplb_state.py:240-243`: mismatched `expert_rearrangement_step`
+  across ranks → "will hang at collective communication calls."
+  Upstream: pytorch/pytorch#174288 (`batch_isend_irecv`+NCCL hangs under high load — the exact
+  call `TorchDistNcclEplbCommunicator.execute` makes), #108378 (NCCL isend blocks w/o matching irecv).
