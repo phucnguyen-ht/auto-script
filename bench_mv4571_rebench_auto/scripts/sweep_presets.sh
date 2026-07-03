@@ -27,24 +27,25 @@ SWEEP_ROOT="${SWEEP_ROOT:-${TICKET_DIR}/logs/sweep_results/$(date +%Y%m%d_%H%M%S
 PRESETS=(
     MTP5-bs64-dg.yaml                                       # baseline (no EPLB, 1M)
     # -- default interval, r0 --
-    MTP5-bs64-dg-eplb-gloo-async-default-r0.yaml
+    MTP5-bs64-dg-eplb-nixl-async-default-r0.yaml
+    # MTP5-bs64-dg-eplb-gloo-async-default-r0.yaml
     MTP5-bs64-dg-eplb-nccl-sync-default-r0.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-default-r0.yaml
     # -- default interval, redundancy r8/r16 --
-    MTP5-bs64-dg-eplb-gloo-async-default-r8.yaml
+    # MTP5-bs64-dg-eplb-gloo-async-default-r8.yaml
     MTP5-bs64-dg-eplb-nccl-sync-default-r8.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-default-r8.yaml
-    MTP5-bs64-dg-eplb-gloo-async-default-r16.yaml
+    # MTP5-bs64-dg-eplb-gloo-async-default-r16.yaml
     MTP5-bs64-dg-eplb-nccl-sync-default-r16.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-default-r16.yaml
     # -- s250 interval, r0/r8/r16 --
-    MTP5-bs64-dg-eplb-gloo-async-s250-r0.yaml
+    # MTP5-bs64-dg-eplb-gloo-async-s250-r0.yaml
     MTP5-bs64-dg-eplb-nccl-sync-s250-r0.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-s250-r0.yaml
-    MTP5-bs64-dg-eplb-gloo-async-s250-r8.yaml
+    # MTP5-bs64-dg-eplb-gloo-async-s250-r8.yaml
     MTP5-bs64-dg-eplb-nccl-sync-s250-r8.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-s250-r8.yaml
-    MTP5-bs64-dg-eplb-gloo-async-s250-r16.yaml
+    # MTP5-bs64-dg-eplb-gloo-async-s250-r16.yaml
     MTP5-bs64-dg-eplb-nccl-sync-s250-r16.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-s250-r16.yaml
 )
@@ -54,7 +55,6 @@ PRESETS=(
 # skip (this MI300 node has none). Override with NIXL_FORCE=1/0.
 if bash "${SCRIPT_DIR}/check_nixl.sh"; then
     PRESETS+=(
-        MTP5-bs64-dg-eplb-nixl-async-default-r0.yaml
         MTP5-bs64-dg-eplb-nixl-async-default-r8.yaml
         MTP5-bs64-dg-eplb-nixl-async-default-r16.yaml
         MTP5-bs64-dg-eplb-nixl-async-s250-r0.yaml
