@@ -208,6 +208,18 @@ Test trên node này: `ibv_devices=0 ucx_rdma_transports=0 → NOT viable → sk
 - TODO khi GPU rảnh: (1) confirm 1 run gloo-r0 + 1 run pynccl-sync-r0 sạch, (2) launch full sweep detached
   ra `logs/sweep_results/`. Lệnh cụ thể trong CONTEXT_HANDOFF.md §"STATE / WHAT'S LEFT".
 
+## 9. CHỐT CUỐI + LAUNCH SWEEP (session 2)
+- **nixl xác nhận KHÔNG dùng được** trên node này (và cả máy cũ của user). Lưu ý: `nixl_probe.py`
+  register 1 buffer 768MiB qua rocm_ipc thì OK (REGISTER_OK), NHƯNG đường EPLB transfer thật vẫn
+  crash → **probe là false-positive, không dùng làm gate**. Giữ `check_nixl.sh` bản RDMA (node này
+  trả not-viable → khối nixl có điều kiện tự bị bỏ).
+- **Thêm biến thể s500** (window/step=500) vào `gen_eplb_presets.sh`, đã regenerate (12 file s500).
+- `sweep_presets.sh`: list do user curate (baseline + gloo/nccl-sync/pynccl-sync × {default,s250,s500}
+  + vài dòng nixl user để lại — sẽ fail & move on). Đã validate MỌI file preset tồn tại.
+- **Đã launch sweep** detached: `logs/sweep_results/<TS>/`, log `<TS>.sweep.log`. Watcher chờ `[sweep] DONE`.
+- Lưu ý vận hành: container `phuc-nguyen-mv-4571` từng tự Exit(137) 2 lần (không OOM) — nếu sweep
+  gián đoạn, `docker start` lại rồi relaunch. Tránh `pkill -f VLLM` rộng (khớp cả shell exec → exit137).
+
 ## 5. Kế hoạch verify còn lại (sau khi có preset chốt)
 Chạy tuần tự vào `logs/mi300_probe/`:
 - [đang chạy] gloo-r16 (131072) — xác nhận EPLB r16 bench được trên MI300.

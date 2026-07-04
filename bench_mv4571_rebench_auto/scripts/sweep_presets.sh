@@ -25,29 +25,47 @@ SWEEP_ROOT="${SWEEP_ROOT:-${TICKET_DIR}/logs/sweep_results/$(date +%Y%m%d_%H%M%S
 #     not affect the benched requests. (baseline keeps 1M.)
 # Regenerate the preset files with: bash ../gen_eplb_presets.sh . Comment out to trim.
 PRESETS=(
-    MTP5-bs64-dg.yaml                                       # baseline (no EPLB, 1M)
-    # -- default interval, r0 --
-    MTP5-bs64-dg-eplb-nixl-async-default-r0.yaml
+    # MTP5-bs64-dg-eplb-nixl-async-default-r0.yaml
+    # MTP5-bs64-dg.yaml                                       # baseline (no EPLB, 1M)
+    # # -- default interval, r0 --
     # MTP5-bs64-dg-eplb-gloo-async-default-r0.yaml
-    MTP5-bs64-dg-eplb-nccl-sync-default-r0.yaml
-    MTP5-bs64-dg-eplb-pynccl-sync-default-r0.yaml
-    # -- default interval, redundancy r8/r16 --
+    # MTP5-bs64-dg-eplb-nccl-sync-default-r0.yaml
+    # MTP5-bs64-dg-eplb-pynccl-sync-default-r0.yaml
+    # # -- default interval, redundancy r8/r16 --
     # MTP5-bs64-dg-eplb-gloo-async-default-r8.yaml
-    MTP5-bs64-dg-eplb-nccl-sync-default-r8.yaml
-    MTP5-bs64-dg-eplb-pynccl-sync-default-r8.yaml
-    # MTP5-bs64-dg-eplb-gloo-async-default-r16.yaml
-    MTP5-bs64-dg-eplb-nccl-sync-default-r16.yaml
-    MTP5-bs64-dg-eplb-pynccl-sync-default-r16.yaml
-    # -- s250 interval, r0/r8/r16 --
+    # MTP5-bs64-dg-eplb-nccl-sync-default-r8.yaml
+    # MTP5-bs64-dg-eplb-pynccl-sync-default-r8.yaml
+    # # MTP5-bs64-dg-eplb-gloo-async-default-r16.yaml
+    # MTP5-bs64-dg-eplb-nccl-sync-default-r16.yaml
+    # MTP5-bs64-dg-eplb-pynccl-sync-default-r16.yaml
+    # # -- s250 interval, r0/r8/r16 --
+    # MTP5-bs64-dg-eplb-nixl-async-s250-r0.yaml
     # MTP5-bs64-dg-eplb-gloo-async-s250-r0.yaml
-    MTP5-bs64-dg-eplb-nccl-sync-s250-r0.yaml
-    MTP5-bs64-dg-eplb-pynccl-sync-s250-r0.yaml
-    # MTP5-bs64-dg-eplb-gloo-async-s250-r8.yaml
+    # MTP5-bs64-dg-eplb-nccl-sync-s250-r0.yaml
+
+    MTP5-bs64-dg-eplb-nixl-async-s250-r8.yaml
+    MTP5-bs64-dg-eplb-gloo-async-s250-r8.yaml
+    MTP5-bs64-dg-eplb-nixl-async-s500-r0.yaml
+    MTP5-bs64-dg-eplb-nixl-async-s500-r8.yaml
+    MTP5-bs64-dg-eplb-gloo-async-s500-r0.yaml
+    MTP5-bs64-dg-eplb-gloo-async-s500-r8.yaml
+
     MTP5-bs64-dg-eplb-nccl-sync-s250-r8.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-s250-r8.yaml
-    # MTP5-bs64-dg-eplb-gloo-async-s250-r16.yaml
+
+    # -- s500 interval, r0/r8/r16 --
+    MTP5-bs64-dg-eplb-nccl-sync-s500-r0.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-s500-r0.yaml
+
+    MTP5-bs64-dg-eplb-nccl-sync-s500-r8.yaml
+    MTP5-bs64-dg-eplb-pynccl-sync-s500-r8.yexpoaml
+
+    # -- s250 interval, r16 --
     MTP5-bs64-dg-eplb-nccl-sync-s250-r16.yaml
     MTP5-bs64-dg-eplb-pynccl-sync-s250-r16.yaml
+
+    MTP5-bs64-dg-eplb-pynccl-sync-s250-r0.yaml
+    MTP5-bs64-dg-eplb-gloo-async-s250-r16.yaml
 )
 
 # nixl is async but only works on nodes WITH an RDMA NIC (see check_nixl.sh /

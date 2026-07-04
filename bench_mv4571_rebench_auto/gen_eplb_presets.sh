@@ -58,7 +58,7 @@ build() {  # <label> <communicator> <mode:async|sync> <step_sfx> <win_json> <red
 
 for spec in "nixl:nixl:async" "gloo:torch_gloo:async" "nccl:torch_nccl:sync" "pynccl:pynccl:sync"; do
     IFS=: read -r label comm mode <<< "${spec}"
-    for step in "default:" 's250:, "window_size": 250, "step_interval": 250'; do
+    for step in "default:" 's250:, "window_size": 250, "step_interval": 250' 's500:, "window_size": 500, "step_interval": 500'; do
         for red in "r0:" 'r8:, "num_redundant_experts": 8' 'r16:, "num_redundant_experts": 16'; do
             build "${label}" "${comm}" "${mode}" "${step%%:*}" "${step#*:}" "${red%%:*}" "${red#*:}"
         done
