@@ -1,0 +1,49 @@
+# [phuc-ablation A9] = A8 + MV4572_EPLB_SKIP_GROUP. Test ứng viên +8% CUỐI CÙNG (phuc-analyse.md §11.6).
+# A8 (enable_eplb:true engine + LAYER_OFF layer + skip validate/remap/step + NoOp communicator;
+# norearr) VẪN regress +8% (88 req vs A0 104) — mọi EPLB machinery đã tắt TRỪ 1 thứ: `_EPLB` torch
+# process group (parallel_state:1904, extra RCCL communicator cùng EP ranks). A8 skip_communicator chỉ
+# bỏ nixl AGENT, KHÔNG bỏ group này (A8 serve.log vẫn "EPLB rank 0" + group 'eplb:0').
+# A9 = A8 + MV4572_EPLB_SKIP_GROUP=1 -> _EPLB=None (không tạo group).
+#   - A9 ~ A0 (hết regress)  => CHỐT: extra _EPLB RCCL communicator = nguồn +8%. Fix = lazy group.
+#   - A9 vẫn regress          => nguồn khác (default_loader weight-layout / engine-level enable_eplb) -> dig.
+# VALID chỉ vì skip_communicator + use_async=false: add_model dùng NoOp branch (KHÔNG get_eplb_group),
+#   async worker off; prepare_communication_buffer_for_model + destroy đã guard `if _EPLB is not None`.
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_EPLB_LAYER_OFF: "1"
+  MV4572_EPLB_SKIP_VALIDATE: "1"
+  MV4572_SKIP_EPLB_REMAP: "1"
+  MV4572_SKIP_EPLB_STEP: "1"
+  MV4572_EPLB_SKIP_COMMUNICATOR: "1"
+  MV4572_EPLB_SKIP_GROUP: "1"
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "200"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

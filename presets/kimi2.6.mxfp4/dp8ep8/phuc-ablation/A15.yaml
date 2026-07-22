@@ -1,0 +1,45 @@
+# [phuc-ablation A15] POINT-3 user: RUNNER_OFF + LAYER_OFF + eplb group ĐỂ NHƯ CŨ (devcomm ON, KHÔNG fix).
+# = A10 (RUNNER_OFF+LAYER_OFF+SKIP_GROUP) NHƯNG GIỮ group (bỏ skip_group, bỏ no_device_comm).
+# Cô lập SẠCH: group+devcomm MỘT MÌNH (runner off, layer off, không add_model/EplbState/communicator) có
+# regress không? (parallel_state:1904 vẫn tạo group + 1 warmup all_reduce lúc init, độc lập RUNNER_OFF).
+# Test nghi ngờ user "eplb_group_no_device_comm inconsistent":
+#   - A15 regress (+10%)  => group+devcomm TẠO (ncclCommInitRank reserve resource) MỘT MÌNH đủ gây regress
+#       => xác nhận FIX A đúng (group là nguồn độc lập).
+#   - A15 ~ A0 (recover)  => group+devcomm MỘT MÌNH KHÔNG regress; cần RUNNER (add_model) => nguồn là
+#       INTERACTION group×runner, FIX A recover vì phá interaction từ 1 phía => attribution "group" chưa sạch.
+# So A10 (=A15 + SKIP_GROUP): A10 recover; A15 chỉ khác A10 ở CÓ group => isolate group tinh khiết.
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_EPLB_LAYER_OFF: "1"
+  MV4572_EPLB_RUNNER_OFF: "1"
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "200"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

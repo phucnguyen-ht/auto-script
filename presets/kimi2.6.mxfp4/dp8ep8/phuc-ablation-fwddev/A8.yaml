@@ -1,0 +1,44 @@
+# [phuc-ablation-fwddev A8] = phuc-ablation/A8.yaml (enable_eplb:true engine + LAYER_OFF layer +
+# skip validate/remap/step + NoOp communicator; norearr) + MV4572_FWDDEV.
+# A8 build MoE layer EPLB-OFF => forward kernel A8 ≡ A0. Khác A0 duy nhất: enable_eplb:true mức engine
+# (còn tạo _EPLB process group). FWDDEV per padded bucket A0 vs A8:
+#   - A8 mean_fwd_dev_ms > A0 (cùng padded) => +8% NẰM TRONG forward GPU (nghi _EPLB comm giành SM).
+#   - A8 ≈ A0                                => +8% Ở NGOÀI forward (host/engine-core/scheduler).
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_EPLB_LAYER_OFF: "1"
+  MV4572_EPLB_SKIP_VALIDATE: "1"
+  MV4572_SKIP_EPLB_REMAP: "1"
+  MV4572_SKIP_EPLB_STEP: "1"
+  MV4572_EPLB_SKIP_COMMUNICATOR: "1"
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "200"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

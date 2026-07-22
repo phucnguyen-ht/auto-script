@@ -1,0 +1,34 @@
+# [CONTROL 0.24] EPLB ON r0, V2 BẬT + fp8-KV (=0.24 gốc), no profiler. Đối chứng r0_noV2.
+env_vars:
+  MV4572_EPLB_MIN_BALANCEDNESS: "1.0"
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  # [control] KHÔNG profiler_config; V2 BẬT (=0.24 gốc). Đối chứng arm noV2.
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  # BENCH: tắt timing + log_balancedness -> tps sạch, KHỚP preset campaign r0 trong sheet.
+  eplb_config: '{"use_async": true, "communicator": "nixl"}'

@@ -1,0 +1,38 @@
+# [TASK2 mechanism] EPLB ON r0, V2 BẬT, fp8-KV, NHƯNG step_interval KHỔNG LỒ -> KHÔNG BAO GIỜ rearrange.
+# Mục đích: tách chi phí REARRANGE (all_reduce+copy+transfer+đổi routing) khỏi chi phí MACHINERY per-forward
+# (eplb_map_to_physical_and_record mỗi layer, identity map vì r0 no-rearrange).
+#   - Nếu tps(r0_v2_norearr) ~ base_v2_gm85  => regression đến từ REARRANGE.
+#   - Nếu tps(r0_v2_norearr) ~ r0_v2         => regression đến từ MACHINERY per-forward.
+# So với base_v2_gm85 (EPLB off, cùng gpu_mem 0.85) và r0_v2 (rearrange bình thường 3000).
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  # step_interval=1e9 -> counter init max(0,1e9-2.5e8)=7.5e8, +1/step, KHÔNG bao giờ chạm 1e9 => KHÔNG rearrange.
+  # should_record cũng luôn False (steps_remaining ~2.5e8 >> window 1000) => window ring rỗng. Mapping kernel VẪN chạy.
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

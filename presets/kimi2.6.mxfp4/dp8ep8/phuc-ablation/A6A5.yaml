@@ -1,0 +1,42 @@
+# [phuc-ablation A6A5] = A6 + A5 gộp: EPLB ON (config) + NO-REARRANGE + TẮT HẾT code EPLB:
+#   MV4572_EPLB_LAYER_OFF (layer off) + SKIP_VALIDATE + SKIP_EPLB_REMAP + SKIP_EPLB_STEP.
+# ⇒ Layer EPLB-off HOÀN TOÀN + step off. Chỉ CÒN: enable_eplb=true ở CONFIG (ZONE 1: EplbState+add_model
+#   +nixl communicator+expert_load buffers+async loop) và env UCX_TLS/EPLB_*.
+# Đọc: nếu A6A5 VẪN regress vs A0 ⇒ nguồn = ZONE-1-presence (nixl/async/buffers) HOẶC confound UCX_TLS
+#   (xem A0_ucx để tách). Nếu A6A5 ~ A0 ⇒ đã gỡ hết code EPLB gây hại.
+# VALID chỉ vì norearr/identity. KHÔNG bật khi có rearrange thật.
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_EPLB_LAYER_OFF: "1"
+  MV4572_EPLB_SKIP_VALIDATE: "1"
+  MV4572_SKIP_EPLB_REMAP: "1"
+  MV4572_SKIP_EPLB_STEP: "1"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": true, "communicator": "nixl", "step_interval": 1000000000}'

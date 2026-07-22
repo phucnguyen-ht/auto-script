@@ -29,6 +29,10 @@ echo "=== readable:${READABLE} at $(date) (backend=${BACKEND}) ==="
 if is_enabled "${AUTO_SERVE}"; then
     [ "${BACKEND,,}" = "sglang" ] || [ -f "${PRESET_YAML}" ] || { echo "[ERROR] preset not found: ${PRESET_YAML}" >&2; exit 1; }
     kill_server
+    # kill first (release our own/stale server), THEN wait for VRAM to actually
+    # drain before serving -- otherwise the new server's memory profiling can OOM
+    # on leftover allocations. Mirrors the eval path (auto_eval.sh).
+    wait_for_gpu_free
     serve_backend "${RUN_DIR}/serve.log"
 fi
 if ! wait_for_server; then echo "[ERROR] server not reachable." >&2; is_enabled "${AUTO_SERVE}" && kill_server; exit 1; fi

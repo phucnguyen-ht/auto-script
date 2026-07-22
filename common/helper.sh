@@ -239,7 +239,13 @@ kill_server() {
         # our bash/tee wrappers.
         echo "[kill] SIGKILL SGLang..."; pkill -9 sglang 2>/dev/null || true
     else
-        echo "[kill] SIGKILL VLLM..."; pkill -9 VLLM 2>/dev/null || true
+        # All vLLM processes share the comm prefix "VLLM::" (VLLM::APIServer,
+        # VLLM::EngineCore_DP*, VLLM::Worker_DP*, VLLM::DP_Coordinator), so this single
+        # comm match (case-sensitive UPPERCASE) kills every one and frees the port. The
+        # old '-f ApiServer' pattern missed "APIServer" (case) -> port-holder survived ->
+        # next serve saw a stale "/health ready after 0s".
+        echo "[kill] SIGKILL VLLM..."
+        pkill -9 VLLM 2>/dev/null || true
     fi
     sleep 15; echo "[kill] Done."
 }

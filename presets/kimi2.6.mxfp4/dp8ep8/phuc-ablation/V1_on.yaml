@@ -1,0 +1,41 @@
+# [phuc-ablation V1_on] MODEL_RUNNER_V1 + EPLB ON (norearr, FULL machinery, KHÔNG fix).
+# = V1_off + enable_eplb:true (norearr) + toàn bộ machinery chạy (layer/validate/remap/step/communicator),
+#   KHÔNG MV4572 skip nào (raw EPLB). Test câu 3 của user: "V1 chạy remap/group vẫn tốt?".
+# Đọc (so V1_off; và so trục V2 = A0 vs A13/full-EPLB):
+#   - V1_on ~ V1_off (không regress)  => V1 KHÔNG chịu group+machinery như V2 => V2 AMPLIFY (câu 3 xác nhận).
+#       -> mổ amplifier V2-specific (cudagraph capture remap? all2all V2? async-output?).
+#   - V1_on regress ~ như V2          => group+machinery là runner-agnostic; "V2 differentiator" cần xét lại.
+# use_async=false + communicator nixl (giống A7: 8 agent tạo, norearr không transfer).
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "0"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "200"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

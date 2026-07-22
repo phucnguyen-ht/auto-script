@@ -1,0 +1,39 @@
+# [phuc-ablation-profile A20] = A20 (SKIP_STEP + FIX_A + real nixl comm, use_async=true, norearr) + torch profiler.
+# MỤC ĐÍCH: trace timeline (8 rank) của config RECOVER để so GPU-bubble với A23 (step ON, regress).
+# GIỮ NGUYÊN điều kiện bench A20: log_balancedness OFF (KHÔNG uncomment) + KHÔNG LOG_TOKEN_BUFFER + KHÔNG FWDDEV
+#   -> step host-only faithful (nếu bật log_balancedness/token_buffer sẽ THÊM việc per-forward -> profile SAI).
+# Giả thuyết: A20 GPU-busy fraction CAO (ít bubble) vs A23.
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_SKIP_EPLB_STEP: "1"
+  MV4572_EPLB_GROUP_NO_DEVICE_COMM: "1"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  profiler_config: '{"profiler":"torch","torch_profiler_dir":"__RUN_PROFILER_DIR__","torch_profiler_with_stack":"False","torch_profiler_record_shapes":"False","torch_profiler_with_memory":"False","torch_profiler_with_flops":"False","ignore_frontend":"True"}'
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": true, "communicator": "nixl", "step_interval": 1000000000}'

@@ -1,0 +1,822 @@
+======== [confirm] AITER_MOREH_ROOT_DIR=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/aiter_moreh | TS=20260717_163558 ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 4 presets x concs(16 64 128 256) x datasets(8k 10k 100k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558
+=================== base_v2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/base_v2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2
+[run_and_bench] serve pid=125643; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 5198256 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=132885; running...
+[run_and_bench] bench DONE
+Found 12 window(s); 12 non-empty -> 12 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16042..95323, 79281 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 7182..12307
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p16.csv (78981 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p16.totals.csv (12307 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.1334
+    max    : 23
+    median : 12.0000
+    p90    : 22.0000
+
+Scenario #2 '8k_p64' (log window #2, lines 109761..206880, 97119 lines)
+
+=== scenario '8k_p64' ===
+  Ranks: 8  steps/rank: 11279..12306
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p64.csv (96381 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p64.totals.csv (12306 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 38.4043
+    max    : 54
+    median : 38.0000
+    p90    : 51.0000
+
+Scenario #3 '8k_p128' (log window #3, lines 221483..311732, 90249 lines)
+
+=== scenario '8k_p128' ===
+  Ranks: 8  steps/rank: 10253..11278
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p128.csv (89192 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p128.totals.csv (11278 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 67.1222
+    max    : 124
+    median : 66.0000
+    p90    : 119.0000
+
+Scenario #4 '8k_p256' (log window #4, lines 325980..400258, 74278 lines)
+
+=== scenario '8k_p256' ===
+  Ranks: 8  steps/rank: 8204..9229
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p256.csv (72794 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_8k_p256.totals.csv (9229 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 132.3437
+    max    : 247
+    median : 123.0000
+    p90    : 247.0000
+
+Scenario #5 '10k_p16' (log window #5, lines 413951..493307, 79356 lines)
+
+=== scenario '10k_p16' ===
+  Ranks: 8  steps/rank: 8532..11039
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p16.csv (78772 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p16.totals.csv (11039 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.3341
+    max    : 24
+    median : 13.0000
+    p90    : 20.0000
+
+Scenario #6 '10k_p64' (log window #6, lines 508038..596058, 88020 lines)
+
+=== scenario '10k_p64' ===
+  Ranks: 8  steps/rank: 10529..11031
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p64.csv (86739 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p64.totals.csv (11031 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 39.4888
+    max    : 60
+    median : 38.0000
+    p90    : 55.0000
+
+Scenario #7 '10k_p128' (log window #7, lines 610831..692857, 82026 lines)
+
+=== scenario '10k_p128' ===
+  Ranks: 8  steps/rank: 10021..10022
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p128.csv (80173 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p128.totals.csv (10022 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 68.5615
+    max    : 113
+    median : 61.0000
+    p90    : 90.0000
+
+Scenario #8 '10k_p256' (log window #8, lines 707488..776813, 69325 lines)
+
+=== scenario '10k_p256' ===
+  Ranks: 8  steps/rank: 8019..8518
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p256.csv (66651 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_10k_p256.totals.csv (8518 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 130.1626
+    max    : 244
+    median : 86.0000
+    p90    : 205.0000
+
+Scenario #9 '100k_p16' (log window #9, lines 779091..855944, 76853 lines)
+
+=== scenario '100k_p16' ===
+  Ranks: 8  steps/rank: 7527..10536
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p16.csv (76283 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p16.totals.csv (10536 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.5425
+    max    : 21
+    median : 15.0000
+    p90    : 18.0000
+
+Scenario #10 '100k_p64' (log window #10, lines 857450..916390, 58940 lines)
+
+=== scenario '100k_p64' ===
+  Ranks: 8  steps/rank: 7019..7518
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p64.csv (58148 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p64.totals.csv (7518 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 35.3740
+    max    : 57
+    median : 33.0000
+    p90    : 49.0000
+
+Scenario #11 '100k_p128' (log window #11, lines 917832..967063, 49231 lines)
+
+=== scenario '100k_p128' ===
+  Ranks: 8  steps/rank: 6013..6017
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p128.csv (48121 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p128.totals.csv (6017 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 67.9942
+    max    : 88
+    median : 67.0000
+    p90    : 76.0000
+
+Scenario #12 '100k_p256' (log window #12, lines 968490..1001929, 33439 lines)
+
+=== scenario '100k_p256' ===
+  Ranks: 8  steps/rank: 4009..4014
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p256.csv (32089 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/decode_running/decode_running_100k_p256.totals.csv (4014 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 132.4898
+    max    : 209
+    median : 114.0000
+    p90    : 179.0000
+
+Done: wrote results for 12 scenario(s).
+Wrote 12 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,99,6906.9,19734.1,50.9448,19.7214,19.069,21.1642,21.6233,101376,180.4517,561.7903,13.1334,23.0,1022
+64,8k,288,11063.9,24145.2,43.5414,23.1355,22.4442,27.219,27.656,294912,166.6035,1770.1424,38.4043,54.0,1023
+128,8k,405,18391.7,27417.8,39.9911,25.1746,24.2748,28.0154,28.5691,414720,152.3148,2722.7821,67.1222,124.0,1020
+256,8k,682,22486.5,33907.5,33.4542,29.9879,28.9868,32.5759,33.2908,698368,189.8257,3678.9955,132.3437,247.0,1021
+16,10k,218,3501.1,9946.9,51.3224,19.541,19.6148,20.9538,21.3202,109000,186.7643,583.6234,13.3341,24.0,495
+64,10k,646,6532.4,12085.7,43.0326,23.3715,22.9918,25.1771,29.1673,323000,189.8776,1701.0957,39.4888,60.0,494
+128,10k,1047,10326.8,14122.2,40.0284,25.0465,24.6895,27.1606,27.4882,523500,192.6162,2717.8394,68.5615,113.0,499
+256,10k,1414,13406.9,17424.4,31.7167,31.8256,32.814,34.8112,35.1035,707000,175.7219,4023.4028,130.1626,222.6,4
+16,100k,212,2420.1,11471.3,45.357,22.1826,21.5992,24.7059,26.415,106000,182.2675,581.5629,13.5425,21.0,493
+64,100k,347,14480.6,21750.2,30.2363,33.3969,33.1149,38.3471,40.103,173500,182.2185,952.1536,35.374,57.0,497
+128,100k,516,20857.2,25602.6,25.0088,40.2191,40.2946,45.0194,47.9607,258000,190.1418,1356.882,67.9942,83.0,1
+256,100k,511,34168.2,42500.7,15.744,63.9649,64.3417,71.639,74.7461,255500,170.3765,1499.6202,132.4898,179.0,2
+   8k,_p16 hit=98.63%  full_miss=0
+   8k,_p64 hit=99.89%  full_miss=0
+  8k,_p128 hit=99.90%  full_miss=0
+  8k,_p256 hit=99.90%  full_miss=0
+  10k,_p16 hit=98.57%  full_miss=0
+  10k,_p64 hit=99.81%  full_miss=0
+ 10k,_p128 hit=99.92%  full_miss=0
+ 10k,_p256 hit=99.92%  full_miss=0
+ 100k,_p16 hit=99.99%  full_miss=0
+ 100k,_p64 hit=99.99%  full_miss=0
+100k,_p128 hit=99.99%  full_miss=0
+100k,_p256 hit=99.99%  full_miss=0
+[run_and_bench] server stopped
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/scenario_summary.csv
+=================== r0_v2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] 8 GPU(s) busy; retry in 30s
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/r0_v2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2
+[run_and_bench] serve pid=235940; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4671616 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=243309; running...
+======== [confirm] AITER_MOREH_ROOT_DIR=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/aiter_moreh | TS=20260717_163558 ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 4 presets x concs(16 64 128 256) x datasets(8k 10k 100k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558
+[sweep] SKIP base_v2 (already complete in /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558)
+=================== r0_v2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/r0_v2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2
+[run_and_bench] serve pid=254560; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4670752 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=261928; running...
+[run_and_bench] bench DONE
+Found 12 window(s); 12 non-empty -> 12 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16733..83671, 66938 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 6155..10256
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p16.csv (66670 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p16.totals.csv (10256 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.0663
+    max    : 22
+    median : 12.0000
+    p90    : 22.0000
+
+Scenario #2 '8k_p64' (log window #2, lines 98302..184106, 85804 lines)
+
+=== scenario '8k_p64' ===
+  Ranks: 8  steps/rank: 10252..11279
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p64.csv (85099 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p64.totals.csv (11279 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 39.2714
+    max    : 55
+    median : 43.0000
+    p90    : 52.0000
+
+Scenario #3 '8k_p128' (log window #3, lines 198474..278464, 79990 lines)
+
+=== scenario '8k_p128' ===
+  Ranks: 8  steps/rank: 9226..10253
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p128.csv (78940 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p128.totals.csv (10253 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 72.2362
+    max    : 120
+    median : 74.0000
+    p90    : 85.0000
+
+Scenario #4 '8k_p256' (log window #4, lines 292766..368076, 75310 lines)
+
+=== scenario '8k_p256' ===
+  Ranks: 8  steps/rank: 9226..9228
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p256.csv (73815 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_8k_p256.totals.csv (9228 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 129.5894
+    max    : 251
+    median : 106.0000
+    p90    : 251.0000
+
+Scenario #5 '10k_p16' (log window #5, lines 381927..458723, 76796 lines)
+
+=== scenario '10k_p16' ===
+  Ranks: 8  steps/rank: 8531..10535
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p16.csv (76256 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p16.totals.csv (10535 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.7409
+    max    : 22
+    median : 13.0000
+    p90    : 17.0000
+
+Scenario #6 '10k_p64' (log window #6, lines 473325..552247, 78922 lines)
+
+=== scenario '10k_p64' ===
+  Ranks: 8  steps/rank: 9026..10029
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p64.csv (77724 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p64.totals.csv (10029 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 39.8981
+    max    : 58
+    median : 43.0000
+    p90    : 57.0000
+
+Scenario #7 '10k_p128' (log window #7, lines 567193..641114, 73921 lines)
+
+=== scenario '10k_p128' ===
+  Ranks: 8  steps/rank: 9019..9024
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p128.csv (72177 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p128.totals.csv (9024 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 72.4866
+    max    : 119
+    median : 75.0000
+    p90    : 109.0000
+
+Scenario #8 '10k_p256' (log window #8, lines 655697..722469, 66772 lines)
+
+=== scenario '10k_p256' ===
+  Ranks: 8  steps/rank: 8017..8022
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p256.csv (64149 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_10k_p256.totals.csv (8022 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 135.1011
+    max    : 252
+    median : 121.0000
+    p90    : 170.0000
+
+Scenario #9 '100k_p16' (log window #9, lines 724750..797030, 72280 lines)
+
+=== scenario '100k_p16' ===
+  Ranks: 8  steps/rank: 7530..9534
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p16.csv (71754 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p16.totals.csv (9534 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.5539
+    max    : 19
+    median : 14.0000
+    p90    : 18.0000
+
+Scenario #10 '100k_p64' (log window #10, lines 798485..854451, 55966 lines)
+
+=== scenario '100k_p64' ===
+  Ranks: 8  steps/rank: 6519..7021
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p64.csv (55153 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p64.totals.csv (7021 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 37.7357
+    max    : 58
+    median : 36.0000
+    p90    : 52.0000
+
+Scenario #11 '100k_p128' (log window #11, lines 855885..902585, 46700 lines)
+
+=== scenario '100k_p128' ===
+  Ranks: 8  steps/rank: 5514..6014
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p128.csv (45614 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p128.totals.csv (6014 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 66.2055
+    max    : 115
+    median : 56.0000
+    p90    : 88.0000
+
+Scenario #12 '100k_p256' (log window #12, lines 903987..937464, 33477 lines)
+
+=== scenario '100k_p256' ===
+  Ranks: 8  steps/rank: 4009..4014
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p256.csv (32089 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/decode_running/decode_running_100k_p256.totals.csv (4014 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 135.3381
+    max    : 249
+    median : 124.0000
+    p90    : 171.0000
+
+Done: wrote results for 12 scenario(s).
+Wrote 12 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,87,8009.8,22420.6,45.2259,22.1834,21.8784,23.4745,23.5986,89088,179.6785,495.819,13.0663,22.0,2043
+64,8k,268,9879.2,26792.4,40.0961,24.9856,25.3922,25.978,26.2216,274432,155.0026,1770.4994,39.2714,55.0,1020
+128,8k,399,16894.0,31839.6,34.7042,28.8886,29.4365,30.2265,30.6944,408576,181.3991,2252.36,72.2362,120.0,1020
+256,8k,657,23472.8,33310.4,32.1233,31.2417,30.8252,33.4925,34.3487,672768,193.4191,3478.2917,129.5894,251.0,1021
+16,10k,199,3668.6,11174.3,45.5448,21.9775,21.882,22.8858,23.8202,99500,189.1953,525.9117,12.7409,22.0,493
+64,10k,589,7081.0,13470.6,38.9155,25.7965,25.5936,27.432,29.8038,294500,195.7028,1504.8331,39.8981,58.0,492
+128,10k,882,10114.5,15945.1,34.1022,29.4662,29.8787,31.8025,32.624,441000,180.1312,2448.2156,72.4866,119.0,499
+256,10k,1485,14101.8,19412.9,30.8168,32.5249,32.1767,33.4229,38.8321,742500,186.613,3978.8227,135.1011,252.0,499
+16,100k,193,2700.4,13114.9,41.3785,24.217,24.0337,26.0158,27.6243,96500,183.3968,526.1814,13.5539,19.0,494
+64,100k,351,14018.5,22589.2,27.9033,36.391,36.0981,41.8064,45.4623,175500,182.7058,960.5606,37.7357,58.0,494
+128,100k,514,19239.7,26903.3,23.7161,42.6226,42.67,47.4188,53.9221,257000,188.9547,1360.1141,66.2055,115.0,494
+256,100k,538,32358.4,42163.8,15.7055,64.2728,61.8597,75.5611,75.8091,269000,166.0234,1620.2532,135.3381,171.0,2
+   8k,_p16 hit=99.89%  full_miss=0
+   8k,_p64 hit=99.90%  full_miss=0
+  8k,_p128 hit=99.90%  full_miss=0
+  8k,_p256 hit=99.90%  full_miss=0
+  10k,_p16 hit=99.92%  full_miss=0
+  10k,_p64 hit=99.80%  full_miss=0
+ 10k,_p128 hit=99.92%  full_miss=0
+ 10k,_p256 hit=99.92%  full_miss=0
+ 100k,_p16 hit=99.99%  full_miss=0
+ 100k,_p64 hit=99.99%  full_miss=0
+100k,_p128 hit=99.99%  full_miss=0
+100k,_p256 hit=99.99%  full_miss=0
+[run_and_bench] server stopped
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/scenario_summary.csv
+=================== base_noV2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] 8 GPU(s) busy; retry in 30s
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/base_noV2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2
+[run_and_bench] serve pid=364987; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 5187424 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=372273; running...
+[run_and_bench] bench DONE
+Found 12 window(s); 12 non-empty -> 12 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16074..93264, 77190 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 6156..11282
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p16.csv (76923 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p16.totals.csv (11282 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.3319
+    max    : 19
+    median : 12.0000
+    p90    : 18.0000
+
+Scenario #2 '8k_p64' (log window #2, lines 107153..197019, 89866 lines)
+
+=== scenario '8k_p64' ===
+  Ranks: 8  steps/rank: 10255..11279
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p64.csv (89204 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p64.totals.csv (11279 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 38.1845
+    max    : 55
+    median : 36.0000
+    p90    : 54.0000
+
+Scenario #3 '8k_p128' (log window #3, lines 210856..293822, 82966 lines)
+
+=== scenario '8k_p128' ===
+  Ranks: 8  steps/rank: 10251..10253
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p128.csv (82012 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p128.totals.csv (10253 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 67.3486
+    max    : 122
+    median : 64.0000
+    p90    : 105.0000
+
+Scenario #4 '8k_p256' (log window #4, lines 307678..381938, 74260 lines)
+
+=== scenario '8k_p256' ===
+  Ranks: 8  steps/rank: 8205..9227
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p256.csv (72790 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_8k_p256.totals.csv (9227 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 129.2714
+    max    : 247
+    median : 111.0000
+    p90    : 247.0000
+
+Scenario #5 '10k_p16' (log window #5, lines 395730..469497, 73767 lines)
+
+=== scenario '10k_p16' ===
+  Ranks: 8  steps/rank: 7027..10532
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p16.csv (73239 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p16.totals.csv (10532 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.6500
+    max    : 21
+    median : 12.0000
+    p90    : 20.0000
+
+Scenario #6 '10k_p64' (log window #6, lines 484191..562047, 77856 lines)
+
+=== scenario '10k_p64' ===
+  Ranks: 8  steps/rank: 9026..10027
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p64.csv (76714 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p64.totals.csv (10027 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 39.1150
+    max    : 54
+    median : 39.0000
+    p90    : 54.0000
+
+Scenario #7 '10k_p128' (log window #7, lines 576171..646012, 69841 lines)
+
+=== scenario '10k_p128' ===
+  Ranks: 8  steps/rank: 8518..8522
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p128.csv (68162 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p128.totals.csv (8522 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 73.3050
+    max    : 117
+    median : 77.0000
+    p90    : 101.0000
+
+Scenario #8 '10k_p256' (log window #8, lines 660324..727092, 66768 lines)
+
+=== scenario '10k_p256' ===
+  Ranks: 8  steps/rank: 8017..8021
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p256.csv (64148 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_10k_p256.totals.csv (8021 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 133.1819
+    max    : 249
+    median : 120.0000
+    p90    : 200.0000
+
+Scenario #9 '100k_p16' (log window #9, lines 729338..803618, 74280 lines)
+
+=== scenario '100k_p16' ===
+  Ranks: 8  steps/rank: 8532..10033
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p16.csv (73765 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p16.totals.csv (10033 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.9302
+    max    : 20
+    median : 13.0000
+    p90    : 16.0000
+
+Scenario #10 '100k_p64' (log window #10, lines 805201..858042, 52841 lines)
+
+=== scenario '100k_p64' ===
+  Ranks: 8  steps/rank: 6514..6530
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p64.csv (52141 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p64.totals.csv (6530 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 35.3752
+    max    : 47
+    median : 34.0000
+    p90    : 45.0000
+
+Scenario #11 '100k_p128' (log window #11, lines 859575..906223, 46648 lines)
+
+=== scenario '100k_p128' ===
+  Ranks: 8  steps/rank: 5512..6013
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p128.csv (45607 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p128.totals.csv (6013 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 63.6463
+    max    : 103
+    median : 64.0000
+    p90    : 85.0000
+
+Scenario #12 '100k_p256' (log window #12, lines 907710..936962, 29252 lines)
+
+=== scenario '100k_p256' ===
+  Ranks: 8  steps/rank: 3508..3516
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p256.csv (28079 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/decode_running/decode_running_100k_p256.totals.csv (3516 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 129.8308
+    max    : 231
+    median : 113.0000
+    p90    : 186.0000
+
+Done: wrote results for 12 scenario(s).
+Wrote 12 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,91,10062.3,21279.5,48.4903,20.6587,20.4949,22.6699,22.7548,93184,190.4354,489.3208,12.3319,19.0,1020
+64,8k,238,13552.9,26220.1,41.0396,24.3835,24.6494,25.0723,25.1267,243712,151.5377,1608.26,38.1845,55.0,1021
+128,8k,419,20147.8,30060.0,37.0219,27.1285,26.8108,29.0235,29.1969,429056,194.0987,2210.5047,67.3486,122.0,1023
+256,8k,651,24042.8,32180.1,33.092,30.226,30.3464,30.6108,31.4672,666624,157.1668,4241.5076,129.2714,247.0,1023
+16,10k,198,4681.4,10753.0,47.4923,21.1065,20.8981,23.0376,23.3173,99000,191.4327,517.153,12.65,21.0,494
+64,10k,629,6774.0,13199.0,39.5819,25.3147,24.8921,26.0827,29.2371,314500,194.6542,1615.6857,39.115,54.0,1489
+128,10k,879,10471.6,16228.3,33.8011,29.6806,30.2596,31.2026,31.7486,439500,183.5148,2394.9016,73.305,108.0,1
+256,10k,1507,14431.1,19124.8,30.0857,33.3613,32.8748,35.925,38.0123,753500,190.5998,3953.3096,133.1819,249.0,499
+16,100k,198,3001.0,12553.2,41.7644,24.0369,23.5606,26.2037,27.7997,99000,194.4494,509.13,12.9302,20.0,493
+64,100k,298,15932.4,24351.3,25.7458,39.1171,39.3691,43.3443,46.9383,149000,188.5635,790.1848,35.3752,47.0,490
+128,100k,478,22121.5,28297.0,22.9481,43.8347,43.0112,50.233,50.4397,239000,188.313,1269.1635,63.6463,88.2,2
+256,100k,403,35196.0,45662.2,14.0196,71.7106,71.4565,79.6813,80.1796,201500,161.1568,1250.3351,129.8308,186.0,1
+   8k,_p16 hit=99.91%  full_miss=0
+   8k,_p64 hit=99.90%  full_miss=0
+  8k,_p128 hit=99.90%  full_miss=0
+  8k,_p256 hit=99.90%  full_miss=0
+  10k,_p16 hit=99.91%  full_miss=0
+  10k,_p64 hit=99.92%  full_miss=0
+ 10k,_p128 hit=99.92%  full_miss=0
+ 10k,_p256 hit=99.92%  full_miss=0
+ 100k,_p16 hit=99.99%  full_miss=0
+ 100k,_p64 hit=99.99%  full_miss=0
+100k,_p128 hit=99.99%  full_miss=0
+100k,_p256 hit=99.99%  full_miss=0
+[run_and_bench] server stopped
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/scenario_summary.csv
+=================== r0_noV2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] 8 GPU(s) busy; retry in 30s
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/r0_noV2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2
+[run_and_bench] serve pid=475319; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4619888 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=482728; running...
+[run_and_bench] bench DONE
+Found 12 window(s); 12 non-empty -> 12 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16515..100922, 84407 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 8206..11283
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p16.csv (84105 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p16.totals.csv (11283 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 14.0534
+    max    : 23
+    median : 13.0000
+    p90    : 18.0000
+
+Scenario #2 '8k_p64' (log window #2, lines 114923..210035, 95112 lines)
+
+=== scenario '8k_p64' ===
+  Ranks: 8  steps/rank: 11277..12305
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p64.csv (94333 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p64.totals.csv (12305 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 40.4869
+    max    : 56
+    median : 40.0000
+    p90    : 56.0000
+
+Scenario #3 '8k_p128' (log window #3, lines 223769..315037, 91268 lines)
+
+=== scenario '8k_p128' ===
+  Ranks: 8  steps/rank: 11276..11277
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p128.csv (90212 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p128.totals.csv (11277 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 66.8574
+    max    : 117
+    median : 67.0000
+    p90    : 85.0000
+
+Scenario #4 '8k_p256' (log window #4, lines 328885..412559, 83674 lines)
+
+=== scenario '8k_p256' ===
+  Ranks: 8  steps/rank: 10251..10252
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p256.csv (82011 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_8k_p256.totals.csv (10252 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 132.1159
+    max    : 246
+    median : 129.0000
+    p90    : 147.0000
+
+Scenario #5 '10k_p16' (log window #5, lines 426249..502596, 76347 lines)
+
+=== scenario '10k_p16' ===
+  Ranks: 8  steps/rank: 8530..11036
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p16.csv (75757 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p16.totals.csv (11036 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.5192
+    max    : 23
+    median : 14.0000
+    p90    : 20.0000
+
+Scenario #6 '10k_p64' (log window #6, lines 517053..603555, 86502 lines)
+
+=== scenario '10k_p64' ===
+  Ranks: 8  steps/rank: 10527..11029
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p64.csv (85225 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p64.totals.csv (11029 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 38.9095
+    max    : 50
+    median : 42.0000
+    p90    : 48.0000
+
+Scenario #7 '10k_p128' (log window #7, lines 617700..691163, 73463 lines)
+
+=== scenario '10k_p128' ===
+  Ranks: 8  steps/rank: 8523..9022
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p128.csv (71668 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p128.totals.csv (9022 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 73.7785
+    max    : 116
+    median : 76.0000
+    p90    : 92.0000
+
+Scenario #8 '10k_p256' (log window #8, lines 705551..772395, 66844 lines)
+
+=== scenario '10k_p256' ===
+  Ranks: 8  steps/rank: 8017..8021
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p256.csv (64157 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_10k_p256.totals.csv (8021 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 137.8415
+    max    : 245
+    median : 135.0000
+    p90    : 220.0000
+
+Scenario #9 '100k_p16' (log window #9, lines 774668..852513, 77845 lines)
+
+=== scenario '100k_p16' ===
+  Ranks: 8  steps/rank: 8532..10039
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p16.csv (77285 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p16.totals.csv (10039 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.7169
+    max    : 19
+    median : 14.0000
+    p90    : 16.0000
+
+Scenario #10 '100k_p64' (log window #10, lines 854046..908941, 54895 lines)
+
+=== scenario '100k_p64' ===
+  Ranks: 8  steps/rank: 6514..7027
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p64.csv (54148 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p64.totals.csv (7027 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 35.0026
+    max    : 56
+    median : 35.0000
+    p90    : 44.0000
+
+Scenario #11 '100k_p128' (log window #11, lines 910458..963712, 53254 lines)
+
+=== scenario '100k_p128' ===
+  Ranks: 8  steps/rank: 6514..6516
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p128.csv (52115 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p128.totals.csv (6516 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 65.5510
+    max    : 96
+    median : 66.0000
+    p90    : 79.0000
+
+Scenario #12 '100k_p256' (log window #12, lines 965283..998684, 33401 lines)
+
+=== scenario '100k_p256' ===
+  Ranks: 8  steps/rank: 4009..4013
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p256.csv (32078 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/decode_running/decode_running_100k_p256.totals.csv (4013 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 129.4346
+    max    : 206
+    median : 126.0000
+    p90    : 181.0000
+
+Done: wrote results for 12 scenario(s).
+Wrote 12 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,99,6437.0,19350.9,53.7864,18.6299,18.4051,19.7119,20.3001,101376,173.3345,584.8577,14.0534,23.0,1020
+64,8k,302,9405.6,24115.2,44.0333,22.7294,22.62,23.7646,23.7967,309248,165.0211,1873.9907,40.4869,56.0,2045
+128,8k,395,19250.6,26044.0,41.6115,24.0679,24.0896,25.1647,25.3124,404480,148.9227,2716.0401,66.8574,117.0,1023
+256,8k,653,22385.7,30413.2,35.7047,28.0212,28.3868,28.6955,28.7007,668672,145.5604,4593.7775,132.1159,246.0,1023
+16,10k,225,3355.5,9659.5,52.3819,19.1639,18.6632,21.6651,22.3016,112500,184.9172,608.3804,13.5192,23.0,494
+64,10k,628,7163.0,12595.7,42.8019,23.416,23.227,25.0191,26.5096,314000,192.762,1628.9516,38.9095,50.0,499
+128,10k,972,10081.5,15765.9,35.8362,27.9962,27.8601,30.0311,30.8482,486000,189.4031,2565.9554,73.7785,116.0,499
+256,10k,1577,12635.7,19095.8,30.7729,32.7808,33.2065,35.7006,38.0751,788500,185.4216,4252.4709,137.8415,245.0,499
+16,100k,216,2773.4,11485.0,45.7608,22.0345,21.4205,24.8113,27.4107,108000,192.1289,562.1225,13.7169,19.0,494
+64,100k,324,15652.3,21387.5,28.7007,35.088,34.8539,39.1123,41.5469,162000,187.5765,863.6476,35.0026,56.0,487
+128,100k,526,20406.5,26885.6,27.2561,36.9824,36.786,44.4924,44.6632,263000,183.6613,1431.9837,65.551,96.0,497
+256,100k,500,34001.6,43966.8,16.0202,62.9398,63.0769,68.4164,74.2955,250000,163.3951,1530.0334,129.4346,185.8,2
+   8k,_p16 hit=99.90%  full_miss=0
+   8k,_p64 hit=99.90%  full_miss=0
+  8k,_p128 hit=99.90%  full_miss=0
+  8k,_p256 hit=99.90%  full_miss=0
+  10k,_p16 hit=99.92%  full_miss=0
+  10k,_p64 hit=99.92%  full_miss=0
+ 10k,_p128 hit=99.92%  full_miss=0
+ 10k,_p256 hit=99.92%  full_miss=0
+ 100k,_p16 hit=99.99%  full_miss=0
+ 100k,_p64 hit=99.99%  full_miss=0
+100k,_p128 hit=99.99%  full_miss=0
+100k,_p256 hit=99.99%  full_miss=0
+[run_and_bench] server stopped
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/scenario_summary.csv
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_noV2/scenario_summary.csv
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/base_v2/scenario_summary.csv
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_noV2/scenario_summary.csv
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_163558/r0_v2/scenario_summary.csv
+
+======== [confirm] TÓM TẮT tps ========
+--- base_noV2 ---
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,91,10062.3,21279.5,48.4903,20.6587,20.4949,22.6699,22.7548,93184,190.4354,489.3208,12.3319,19.0,1020
+64,8k,238,13552.9,26220.1,41.0396,24.3835,24.6494,25.0723,25.1267,243712,151.5377,1608.26,38.1845,55.0,1021
+128,8k,419,20147.8,30060.0,37.0219,27.1285,26.8108,29.0235,29.1969,429056,194.0987,2210.5047,67.3486,122.0,1023
+256,8k,651,24042.8,32180.1,33.092,30.226,30.3464,30.6108,31.4672,666624,157.1668,4241.5076,129.2714,247.0,1023
+16,10k,198,4681.4,10753.0,47.4923,21.1065,20.8981,23.0376,23.3173,99000,191.4327,517.153,12.65,21.0,494
+64,10k,629,6774.0,13199.0,39.5819,25.3147,24.8921,26.0827,29.2371,314500,194.6542,1615.6857,39.115,54.0,1489
+128,10k,879,10471.6,16228.3,33.8011,29.6806,30.2596,31.2026,31.7486,439500,183.5148,2394.9016,73.305,108.0,1
+256,10k,1507,14431.1,19124.8,30.0857,33.3613,32.8748,35.925,38.0123,753500,190.5998,3953.3096,133.1819,249.0,499
+16,100k,198,3001.0,12553.2,41.7644,24.0369,23.5606,26.2037,27.7997,99000,194.4494,509.13,12.9302,20.0,493
+64,100k,298,15932.4,24351.3,25.7458,39.1171,39.3691,43.3443,46.9383,149000,188.5635,790.1848,35.3752,47.0,490
+128,100k,478,22121.5,28297.0,22.9481,43.8347,43.0112,50.233,50.4397,239000,188.313,1269.1635,63.6463,88.2,2
+256,100k,403,35196.0,45662.2,14.0196,71.7106,71.4565,79.6813,80.1796,201500,161.1568,1250.3351,129.8308,186.0,1
+--- base_v2 ---
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,99,6906.9,19734.1,50.9448,19.7214,19.069,21.1642,21.6233,101376,180.4517,561.7903,13.1334,23.0,1022
+64,8k,288,11063.9,24145.2,43.5414,23.1355,22.4442,27.219,27.656,294912,166.6035,1770.1424,38.4043,54.0,1023
+128,8k,405,18391.7,27417.8,39.9911,25.1746,24.2748,28.0154,28.5691,414720,152.3148,2722.7821,67.1222,124.0,1020
+256,8k,682,22486.5,33907.5,33.4542,29.9879,28.9868,32.5759,33.2908,698368,189.8257,3678.9955,132.3437,247.0,1021
+16,10k,218,3501.1,9946.9,51.3224,19.541,19.6148,20.9538,21.3202,109000,186.7643,583.6234,13.3341,24.0,495
+64,10k,646,6532.4,12085.7,43.0326,23.3715,22.9918,25.1771,29.1673,323000,189.8776,1701.0957,39.4888,60.0,494
+128,10k,1047,10326.8,14122.2,40.0284,25.0465,24.6895,27.1606,27.4882,523500,192.6162,2717.8394,68.5615,113.0,499
+256,10k,1414,13406.9,17424.4,31.7167,31.8256,32.814,34.8112,35.1035,707000,175.7219,4023.4028,130.1626,222.6,4
+16,100k,212,2420.1,11471.3,45.357,22.1826,21.5992,24.7059,26.415,106000,182.2675,581.5629,13.5425,21.0,493
+64,100k,347,14480.6,21750.2,30.2363,33.3969,33.1149,38.3471,40.103,173500,182.2185,952.1536,35.374,57.0,497
+128,100k,516,20857.2,25602.6,25.0088,40.2191,40.2946,45.0194,47.9607,258000,190.1418,1356.882,67.9942,83.0,1
+256,100k,511,34168.2,42500.7,15.744,63.9649,64.3417,71.639,74.7461,255500,170.3765,1499.6202,132.4898,179.0,2
+--- r0_noV2 ---
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,99,6437.0,19350.9,53.7864,18.6299,18.4051,19.7119,20.3001,101376,173.3345,584.8577,14.0534,23.0,1020
+64,8k,302,9405.6,24115.2,44.0333,22.7294,22.62,23.7646,23.7967,309248,165.0211,1873.9907,40.4869,56.0,2045
+128,8k,395,19250.6,26044.0,41.6115,24.0679,24.0896,25.1647,25.3124,404480,148.9227,2716.0401,66.8574,117.0,1023
+256,8k,653,22385.7,30413.2,35.7047,28.0212,28.3868,28.6955,28.7007,668672,145.5604,4593.7775,132.1159,246.0,1023
+16,10k,225,3355.5,9659.5,52.3819,19.1639,18.6632,21.6651,22.3016,112500,184.9172,608.3804,13.5192,23.0,494
+64,10k,628,7163.0,12595.7,42.8019,23.416,23.227,25.0191,26.5096,314000,192.762,1628.9516,38.9095,50.0,499
+128,10k,972,10081.5,15765.9,35.8362,27.9962,27.8601,30.0311,30.8482,486000,189.4031,2565.9554,73.7785,116.0,499
+256,10k,1577,12635.7,19095.8,30.7729,32.7808,33.2065,35.7006,38.0751,788500,185.4216,4252.4709,137.8415,245.0,499
+16,100k,216,2773.4,11485.0,45.7608,22.0345,21.4205,24.8113,27.4107,108000,192.1289,562.1225,13.7169,19.0,494
+64,100k,324,15652.3,21387.5,28.7007,35.088,34.8539,39.1123,41.5469,162000,187.5765,863.6476,35.0026,56.0,487
+128,100k,526,20406.5,26885.6,27.2561,36.9824,36.786,44.4924,44.6632,263000,183.6613,1431.9837,65.551,96.0,497
+256,100k,500,34001.6,43966.8,16.0202,62.9398,63.0769,68.4164,74.2955,250000,163.3951,1530.0334,129.4346,185.8,2
+--- r0_v2 ---
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,87,8009.8,22420.6,45.2259,22.1834,21.8784,23.4745,23.5986,89088,179.6785,495.819,13.0663,22.0,2043
+64,8k,268,9879.2,26792.4,40.0961,24.9856,25.3922,25.978,26.2216,274432,155.0026,1770.4994,39.2714,55.0,1020
+128,8k,399,16894.0,31839.6,34.7042,28.8886,29.4365,30.2265,30.6944,408576,181.3991,2252.36,72.2362,120.0,1020
+256,8k,657,23472.8,33310.4,32.1233,31.2417,30.8252,33.4925,34.3487,672768,193.4191,3478.2917,129.5894,251.0,1021
+16,10k,199,3668.6,11174.3,45.5448,21.9775,21.882,22.8858,23.8202,99500,189.1953,525.9117,12.7409,22.0,493
+64,10k,589,7081.0,13470.6,38.9155,25.7965,25.5936,27.432,29.8038,294500,195.7028,1504.8331,39.8981,58.0,492
+128,10k,882,10114.5,15945.1,34.1022,29.4662,29.8787,31.8025,32.624,441000,180.1312,2448.2156,72.4866,119.0,499
+256,10k,1485,14101.8,19412.9,30.8168,32.5249,32.1767,33.4229,38.8321,742500,186.613,3978.8227,135.1011,252.0,499
+16,100k,193,2700.4,13114.9,41.3785,24.217,24.0337,26.0158,27.6243,96500,183.3968,526.1814,13.5539,19.0,494
+64,100k,351,14018.5,22589.2,27.9033,36.391,36.0981,41.8064,45.4623,175500,182.7058,960.5606,37.7357,58.0,494
+128,100k,514,19239.7,26903.3,23.7161,42.6226,42.67,47.4188,53.9221,257000,188.9547,1360.1141,66.2055,115.0,494
+256,100k,538,32358.4,42163.8,15.7055,64.2728,61.8597,75.5611,75.8091,269000,166.0234,1620.2532,135.3381,171.0,2

@@ -1,0 +1,50 @@
+# [phuc-ablation A11] MINIMAL-SKIP test: group OFF nhưng BẬT LẠI mọi machinery per-forward.
+# Mục đích: A8 tắt NHIỀU thứ (layer/validate/remap/step) → có thể confound "group là root-cause DUY NHẤT
+# hay tổ hợp". A11 giữ enable_eplb:true + CHỈ skip 2 thứ BUỘC-KÈM với group-off, còn lại BẬT HẾT:
+#   - MV4572_EPLB_SKIP_GROUP=1      -> _EPLB=None (thứ đang test)
+#   - MV4572_EPLB_SKIP_COMMUNICATOR=1 (BUỘC: create_eplb_communicator gọi get_eplb_group -> crash nếu group=None;
+#     A7 vs A8 cho thấy communicator ~0 effect nên không confound)
+#   - use_async:false (BUỘC: start_async_worker gọi get_eplb_group -> crash; ở norearr async chỉ park, vô hại)
+#   - step_interval:1e9 (BUỘC norearr: không group/communicator -> không transfer thật; remap-identity)
+#   BẬT LẠI (bỏ so với A8): LAYER (không LAYER_OFF), _validate_eplb_state, _apply_eplb_mapping (remap kernel
+#     mỗi forward, identity+record-off ở norearr), eplb.step() (counter++). = machinery per-forward chạy ĐẦY ĐỦ.
+# An toàn: layer/remap/step/validate chỉ dùng get_ep_group + eplb_state cục bộ, KHÔNG cần _EPLB group.
+# Đọc kết quả (vs A0=104/18ms, A8=88/19.9ms):
+#   - A11 ~ A0 (fwd ~18ms, tps ~104) => CHỐT: `_EPLB` group là root-cause DUY NHẤT; machinery chạy đầy đủ
+#       vẫn KHÔNG regress khi group off. (loại giả thuyết "tổ hợp").
+#   - A11 regress (~A8)               => machinery (remap/step/record) CŨNG góp => tổ hợp, phải dig thêm.
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_EPLB_SKIP_COMMUNICATOR: "1"
+  MV4572_EPLB_SKIP_GROUP: "1"
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "200"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

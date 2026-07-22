@@ -1,0 +1,194 @@
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 4 presets x concs(16 64 128 256) x datasets(8k 10k 100k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_152925
+=================== base_v2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/base_v2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_152925/base_v2
+[run_and_bench] serve pid=124507; waiting for health...
+[run_and_bench] server died
+ERROR 07-17 15:29:30 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/quantization/utils/gemm_ops.py", line 7, in <module>
+ERROR 07-17 15:29:30 [__init__.py:64]     import aiter as rocm_aiter
+ERROR 07-17 15:29:30 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+ERROR 07-17 15:29:30 [__init__.py:64]     from .jit import core as core  # noqa: E402
+ERROR 07-17 15:29:30 [__init__.py:64]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:29:30 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+ERROR 07-17 15:29:30 [__init__.py:64]     assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+ERROR 07-17 15:29:30 [__init__.py:64]            ^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:29:30 [__init__.py:64] AssertionError: AITER_MOREH_ROOT_DIR is not set!
+INFO 07-17 15:29:30 [__init__.py:40] [MOREH] Registered aiter-fmha MLA prefill backend in the CUSTOM slot (VLLM_MOREH_USE_AITER_MLA_PREFILL=1)
+ERROR 07-17 15:29:30 [config.py:29] Failed to import Triton kernels. Please make sure your triton version is compatible. Error: No module named 'triton_kernels.matmul_ogs'
+Traceback (most recent call last):
+  File "/usr/local/bin/vllm-moreh", line 33, in <module>
+    sys.exit(load_entry_point('vllm-moreh', 'console_scripts', 'vllm-moreh')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/main.py", line 52, in main
+    cmd(args, extra_args)
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/serve.py", line 87, in cmd
+    parser = make_arg_parser(FlexibleArgumentParser(prog="vllm-moreh serve"))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/entrypoints/openai/cli_args.py", line 382, in make_arg_parser
+    parser = AsyncEngineArgs.add_cli_args(parser)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/engine/arg_utils.py", line 2673, in add_cli_args
+    load_general_plugins()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/plugins/__init__.py", line 82, in load_general_plugins
+    func()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 6, in register
+    _apply_monkey_patches()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 16, in _apply_monkey_patches
+    from vllm_moreh.ops.rocm_aiter_mla_sparse import rocm_fp8_paged_mqa_logits
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/rocm_aiter_mla_sparse.py", line 18, in <module>
+    import aiter
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+    from .jit import core as core  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+    assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: AITER_MOREH_ROOT_DIR is not set!
+[sweep] base_v2 FAILED -> next
+=================== r0_v2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/r0_v2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_152925/r0_v2
+[run_and_bench] serve pid=124785; waiting for health...
+[run_and_bench] server died
+ERROR 07-17 15:29:45 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/quantization/utils/gemm_ops.py", line 7, in <module>
+ERROR 07-17 15:29:45 [__init__.py:64]     import aiter as rocm_aiter
+ERROR 07-17 15:29:45 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+ERROR 07-17 15:29:45 [__init__.py:64]     from .jit import core as core  # noqa: E402
+ERROR 07-17 15:29:45 [__init__.py:64]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:29:45 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+ERROR 07-17 15:29:45 [__init__.py:64]     assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+ERROR 07-17 15:29:45 [__init__.py:64]            ^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:29:45 [__init__.py:64] AssertionError: AITER_MOREH_ROOT_DIR is not set!
+INFO 07-17 15:29:45 [__init__.py:40] [MOREH] Registered aiter-fmha MLA prefill backend in the CUSTOM slot (VLLM_MOREH_USE_AITER_MLA_PREFILL=1)
+ERROR 07-17 15:29:45 [config.py:29] Failed to import Triton kernels. Please make sure your triton version is compatible. Error: No module named 'triton_kernels.matmul_ogs'
+Traceback (most recent call last):
+  File "/usr/local/bin/vllm-moreh", line 33, in <module>
+    sys.exit(load_entry_point('vllm-moreh', 'console_scripts', 'vllm-moreh')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/main.py", line 52, in main
+    cmd(args, extra_args)
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/serve.py", line 87, in cmd
+    parser = make_arg_parser(FlexibleArgumentParser(prog="vllm-moreh serve"))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/entrypoints/openai/cli_args.py", line 382, in make_arg_parser
+    parser = AsyncEngineArgs.add_cli_args(parser)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/engine/arg_utils.py", line 2673, in add_cli_args
+    load_general_plugins()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/plugins/__init__.py", line 82, in load_general_plugins
+    func()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 6, in register
+    _apply_monkey_patches()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 16, in _apply_monkey_patches
+    from vllm_moreh.ops.rocm_aiter_mla_sparse import rocm_fp8_paged_mqa_logits
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/rocm_aiter_mla_sparse.py", line 18, in <module>
+    import aiter
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+    from .jit import core as core  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+    assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: AITER_MOREH_ROOT_DIR is not set!
+[sweep] r0_v2 FAILED -> next
+=================== base_noV2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/base_noV2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_152925/base_noV2
+[run_and_bench] serve pid=125063; waiting for health...
+[run_and_bench] server died
+ERROR 07-17 15:30:00 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/quantization/utils/gemm_ops.py", line 7, in <module>
+ERROR 07-17 15:30:00 [__init__.py:64]     import aiter as rocm_aiter
+ERROR 07-17 15:30:00 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+ERROR 07-17 15:30:00 [__init__.py:64]     from .jit import core as core  # noqa: E402
+ERROR 07-17 15:30:00 [__init__.py:64]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:30:00 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+ERROR 07-17 15:30:00 [__init__.py:64]     assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+ERROR 07-17 15:30:00 [__init__.py:64]            ^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:30:00 [__init__.py:64] AssertionError: AITER_MOREH_ROOT_DIR is not set!
+INFO 07-17 15:30:00 [__init__.py:40] [MOREH] Registered aiter-fmha MLA prefill backend in the CUSTOM slot (VLLM_MOREH_USE_AITER_MLA_PREFILL=1)
+ERROR 07-17 15:30:00 [config.py:29] Failed to import Triton kernels. Please make sure your triton version is compatible. Error: No module named 'triton_kernels.matmul_ogs'
+Traceback (most recent call last):
+  File "/usr/local/bin/vllm-moreh", line 33, in <module>
+    sys.exit(load_entry_point('vllm-moreh', 'console_scripts', 'vllm-moreh')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/main.py", line 52, in main
+    cmd(args, extra_args)
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/serve.py", line 87, in cmd
+    parser = make_arg_parser(FlexibleArgumentParser(prog="vllm-moreh serve"))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/entrypoints/openai/cli_args.py", line 382, in make_arg_parser
+    parser = AsyncEngineArgs.add_cli_args(parser)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/engine/arg_utils.py", line 2673, in add_cli_args
+    load_general_plugins()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/plugins/__init__.py", line 82, in load_general_plugins
+    func()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 6, in register
+    _apply_monkey_patches()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 16, in _apply_monkey_patches
+    from vllm_moreh.ops.rocm_aiter_mla_sparse import rocm_fp8_paged_mqa_logits
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/rocm_aiter_mla_sparse.py", line 18, in <module>
+    import aiter
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+    from .jit import core as core  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+    assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: AITER_MOREH_ROOT_DIR is not set!
+[sweep] base_noV2 FAILED -> next
+=================== r0_noV2 @ concs=16,64,128,256 ds=8k,10k,100k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/r0_noV2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_152925/r0_noV2
+[run_and_bench] serve pid=125341; waiting for health...
+[run_and_bench] server died
+ERROR 07-17 15:30:16 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/quantization/utils/gemm_ops.py", line 7, in <module>
+ERROR 07-17 15:30:16 [__init__.py:64]     import aiter as rocm_aiter
+ERROR 07-17 15:30:16 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+ERROR 07-17 15:30:16 [__init__.py:64]     from .jit import core as core  # noqa: E402
+ERROR 07-17 15:30:16 [__init__.py:64]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:30:16 [__init__.py:64]   File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+ERROR 07-17 15:30:16 [__init__.py:64]     assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+ERROR 07-17 15:30:16 [__init__.py:64]            ^^^^^^^^^^^^^^^^^^^^
+ERROR 07-17 15:30:16 [__init__.py:64] AssertionError: AITER_MOREH_ROOT_DIR is not set!
+INFO 07-17 15:30:16 [__init__.py:40] [MOREH] Registered aiter-fmha MLA prefill backend in the CUSTOM slot (VLLM_MOREH_USE_AITER_MLA_PREFILL=1)
+ERROR 07-17 15:30:16 [config.py:29] Failed to import Triton kernels. Please make sure your triton version is compatible. Error: No module named 'triton_kernels.matmul_ogs'
+Traceback (most recent call last):
+  File "/usr/local/bin/vllm-moreh", line 33, in <module>
+    sys.exit(load_entry_point('vllm-moreh', 'console_scripts', 'vllm-moreh')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/main.py", line 52, in main
+    cmd(args, extra_args)
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/cli/serve.py", line 87, in cmd
+    parser = make_arg_parser(FlexibleArgumentParser(prog="vllm-moreh serve"))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/entrypoints/openai/cli_args.py", line 382, in make_arg_parser
+    parser = AsyncEngineArgs.add_cli_args(parser)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/engine/arg_utils.py", line 2673, in add_cli_args
+    load_general_plugins()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/vllm/vllm/plugins/__init__.py", line 82, in load_general_plugins
+    func()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 6, in register
+    _apply_monkey_patches()
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/__init__.py", line 16, in _apply_monkey_patches
+    from vllm_moreh.ops.rocm_aiter_mla_sparse import rocm_fp8_paged_mqa_logits
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/src/vllm_moreh/ops/rocm_aiter_mla_sparse.py", line 18, in <module>
+    import aiter
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/__init__.py", line 87, in <module>
+    from .jit import core as core  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/vllm-moreh/3rdparty/aiter/aiter/jit/core.py", line 21, in <module>
+    assert AITER_MOREH_ROOT_DIR, "AITER_MOREH_ROOT_DIR is not set!"
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: AITER_MOREH_ROOT_DIR is not set!
+[sweep] r0_noV2 FAILED -> next
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confirm/20260717_152925
+[sweep] summaries:

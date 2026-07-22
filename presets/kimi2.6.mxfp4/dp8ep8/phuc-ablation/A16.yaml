@@ -1,0 +1,45 @@
+# [phuc-ablation A16] MINIMAL NO-REGRESSION config @ V2 (norearr) = fix CẢ 3 nguồn độc lập.
+# 3 nguồn (~+10% mỗi cái, cô lập §14): GROUP (RCCL devcomm), REMAP kernel, REAL communicator (nixl VRAM-IPC).
+# A16 fix cả 3, GIỮ layer eplb ON (EPLB structure thật) + validate/step ON:
+#   - MV4572_SKIP_EPLB_REMAP=1        -> bỏ kernel remap (identity ở norearr).
+#   - MV4572_EPLB_GROUP_NO_DEVICE_COMM=1 (FIX A) -> group functional, no RCCL devcomm phụ.
+#   - MV4572_EPLB_SKIP_COMMUNICATOR=1 -> NoOp communicator (no nixl agent / VRAM-IPC reg).
+# use_async=false (async KHÔNG phải nguồn — A13 vs A14 giống hệt; NoOp comm nên async không cần).
+# Kỳ vọng: A16 ≈ A0 (18ms/104) => CHỐT: EPLB-on @norearr = miễn phí ở V2 sau 3 fix.
+# Chạy FULL sweep 8k/10k/100k × 16/64/128 để confirm không regress toàn dải.
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_SKIP_EPLB_REMAP: "1"
+  MV4572_EPLB_GROUP_NO_DEVICE_COMM: "1"
+  MV4572_EPLB_SKIP_COMMUNICATOR: "1"
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "500"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

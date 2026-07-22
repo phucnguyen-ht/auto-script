@@ -16,6 +16,11 @@ COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 RUN_READABLE="${RUN_READABLE:-1}"
 RUN_EVAL="${RUN_EVAL:-1}"
+# SHARED_SERVE=on: when the phases include readable and/or eval, serve the model ONCE
+# and run every readable method + eval against that single server (sub-scripts run with
+# AUTO_SERVE=0 -> no kill/restart between them). off (default) = original behavior
+# (each readable method and eval kills + restarts its own server).
+SHARED_SERVE="${SHARED_SERVE:-off}"
 
 # Wire the shared scripts to this ticket.
 export ENV_YAML="${ENV_YAML:-${SCRIPT_DIR}/env.yaml}"
@@ -62,6 +67,38 @@ for be in ${BACKENDS_TO_RUN}; do
 
     echo; echo "############### BACKEND=${be} ###############"
 
+    # SHARED_SERVE=on: bring up ONE server here for all readable+eval phases, then run
+    # the sub-scripts with AUTO_SERVE=0 so they reuse it (no kill/restart per method).
+    _shared=0
+    _phl=" $(phases_list) "
+    if is_enabled "${SHARED_SERVE}" && { [[ "${_phl}" == *" readable "* ]] || [[ "${_phl}" == *" eval "* ]]; }; then
+        _shared=1
+        echo "[run_all] SHARED_SERVE=on -> one serve reused by all readable+eval phases"
+        resolve_backend
+        resolve_model_path
+        kill_server
+        # kill first (release stale/our server), THEN wait for VRAM to actually drain
+        # before serving so the model load doesn't OOM on leftover allocations (mirrors
+        # the per-phase serve paths in auto_readable_template.sh / auto_eval.sh).
+        wait_for_gpu_free
+        _shared_log="${MASTER_LOG_DIR}/serve_shared_${be}.log"
+        if [ "${be,,}" = "sglang" ]; then
+            serve_backend "${_shared_log}"
+        else
+            # scheduler-cls (PDSLoggingScheduler) is incompatible with lm_eval; strip it so
+            # the single shared server works for BOTH readable and eval.
+            _shared_preset="${MASTER_LOG_DIR}/preset_shared.yaml"
+            yq 'del(.engine_args["scheduler-cls"])' "${PRESET_YAML}" > "${_shared_preset}"
+            PRESET_YAML="${_shared_preset}"
+            serve_backend "${_shared_log}"
+        fi
+        if ! wait_for_server; then
+            echo "[run_all][ERROR] shared serve failed to become ready" >&2
+            kill_server; exit 1
+        fi
+        export AUTO_SERVE=0
+    fi
+
     # Run phases in the order given by env.yaml .phases (default: readable eval).
     # readable/eval are handled here; any other name is delegated to the ticket's
     # ticket_phase() (e.g. bench/profile), which should guard on $BACKEND.
@@ -72,7 +109,11 @@ for be in ${BACKENDS_TO_RUN}; do
                 # Run only the readable methods enabled in env.yaml .eval.readable.
                 for meth in $(readable_list); do
                     rm -rf /root/.cache/vllm/torch_compile_cache/
-                    phase "readable:${meth}" bash "${COMMON_DIR}/auto_readable_${meth}.sh"
+                    # Prefer a ticket-local readable script over the shared one, so a
+                    # ticket can add its own method (e.g. longbench2) without touching common/.
+                    rscript="${SCRIPT_DIR}/auto_readable_${meth}.sh"
+                    [ -f "${rscript}" ] || rscript="${COMMON_DIR}/auto_readable_${meth}.sh"
+                    phase "readable:${meth}" bash "${rscript}"
                 done
                 ;;
             eval)
@@ -86,6 +127,13 @@ for be in ${BACKENDS_TO_RUN}; do
                 ;;
         esac
     done
+
+    # Tear down the shared server (if any) after this backend's phases.
+    if [ "${_shared}" -eq 1 ]; then
+        echo "[run_all] SHARED_SERVE teardown for backend=${be}"
+        unset AUTO_SERVE
+        kill_server
+    fi
 done
 
 cat <<EOF

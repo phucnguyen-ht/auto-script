@@ -1,0 +1,116 @@
+======== [confound] TS=20260718_023920 | conc16/8k | base_v2_gm85 + r0_v2 + base_noV2 ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 3 presets x concs(16) x datasets(8k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920
+=================== base_v2_gm85 @ concs=16 ds=8k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/base_v2_gm85.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_v2_gm85
+[run_and_bench] serve pid=806958; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4758224 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=814204; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16220..98601, 82381 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 9232..11282
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_v2_gm85/decode_running/decode_running_8k_p16.csv (82058 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_v2_gm85/decode_running/decode_running_8k_p16.totals.csv (11282 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 15.0517
+    max    : 22
+    median : 16.0000
+    p90    : 22.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_v2_gm85/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,111,4973.5,19640.0,51.4685,19.4688,18.9938,21.4164,21.5775,113664,180.1729,630.8607,15.0517,22.0,2037
+   8k,_p16 hit=99.90%  full_miss=0
+[run_and_bench] server stopped
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_v2_gm85/scenario_summary.csv
+=================== r0_v2 @ concs=16 ds=8k (1 serve) ===================
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/r0_v2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/r0_v2
+[run_and_bench] serve pid=825589; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4671616 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=832954; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16771..89860, 73089 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 7181..11281
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/r0_v2/decode_running/decode_running_8k_p16.csv (72820 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/r0_v2/decode_running/decode_running_8k_p16.totals.csv (11281 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.3329
+    max    : 23
+    median : 12.0000
+    p90    : 17.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/r0_v2/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,92,7398.8,23689.6,45.8282,21.8494,21.4114,23.5632,23.5887,94208,180.5918,521.6626,12.3329,23.0,1021
+   8k,_p16 hit=99.89%  full_miss=0
+[run_and_bench] server stopped
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/r0_v2/scenario_summary.csv
+=================== base_noV2 @ concs=16 ds=8k (1 serve) ===================
+[sweep] 8 GPU(s) busy; retry in 30s
+[sweep] GPUs free
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/presets/kimi2.6.mxfp4/dp8ep8/v0.24.0_ablation/base_noV2.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_noV2
+[run_and_bench] serve pid=844346; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 5187424 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=851630; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16140..98479, 82339 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 8207..12306
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_noV2/decode_running/decode_running_8k_p16.csv (82054 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_noV2/decode_running/decode_running_8k_p16.totals.csv (12306 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 11.9701
+    max    : 23
+    median : 11.0000
+    p90    : 19.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_noV2/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,103,7044.0,22720.6,46.7418,21.4324,21.2823,23.0921,23.1644,105472,198.6096,531.0518,11.9701,23.0,1020
+   8k,_p16 hit=98.51%  full_miss=0
+[run_and_bench] server stopped
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_noV2/scenario_summary.csv
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_noV2/scenario_summary.csv
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/base_v2_gm85/scenario_summary.csv
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_0.24.0_confound/20260718_023920/r0_v2/scenario_summary.csv
+
+======== [confound] tps + [MV-4572] EngineCore cfg ========
+--- base_noV2 ---
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,103,7044.0,22720.6,46.7418,21.4324,21.2823,23.0921,23.1644,105472,198.6096,531.0518,11.9701,23.0,1020
+--- base_v2_gm85 ---
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,111,4973.5,19640.0,51.4685,19.4688,18.9938,21.4164,21.5775,113664,180.1729,630.8607,15.0517,22.0,2037
+--- r0_v2 ---
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,92,7398.8,23689.6,45.8282,21.8494,21.4114,23.5632,23.5887,94208,180.5918,521.6626,12.3329,23.0,1021
+--- [MV-4572] runtime cfg (verify max_concurrent_batches V1 vs V2) ---
+[base_noV2] (EngineCore_DP7 pid=844903) INFO 07-18 03:15:19 [core.py:228] [MV-4572] EngineCore cfg: use_v2_model_runner=False async_scheduling=True pp_size=1 max_concurrent_batches=2 batch_queue_size=2 step_fn=step_with_batch_queue
+[base_v2_gm85] (EngineCore_DP3 pid=807510) INFO 07-18 02:45:19 [core.py:228] [MV-4572] EngineCore cfg: use_v2_model_runner=True async_scheduling=True pp_size=1 max_concurrent_batches=2 batch_queue_size=2 step_fn=step_with_batch_queue
+[r0_v2] (EngineCore_DP2 pid=826140) INFO 07-18 03:00:11 [core.py:228] [MV-4572] EngineCore cfg: use_v2_model_runner=True async_scheduling=True pp_size=1 max_concurrent_batches=2 batch_queue_size=2 step_fn=step_with_batch_queue

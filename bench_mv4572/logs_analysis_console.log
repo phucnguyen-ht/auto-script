@@ -1,0 +1,278 @@
+======== [profile] LOGS -> auto-script/bench_mv4572/logs_analysis/20260718_033344/  (TS=20260718_033344) ========
+======== [profile v0.24.0] PRESET=r0_v2_prof.yaml conc=16 ds=8k -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 1 presets x concs(16) x datasets(8k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k
+=================== r0_v2_prof @ concs=16 ds=8k (1 serve, PROFILE) ===================
+[sweep] GPUs free
+[profile] profiler dir = /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/profiling_result
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/preset.profile.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof
+[run_and_bench] serve pid=863058; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4671616 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=870422; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 17313..95415, 78102 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 7181..12306
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/decode_running/decode_running_8k_p16.csv (75896 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/decode_running/decode_running_8k_p16.totals.csv (12306 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 11.0563
+    max    : 18
+    median : 12.0000
+    p90    : 16.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,89,7729.3,24410.2,43.632,22.985,22.8616,24.6949,24.7601,91136,189.273,481.5055,11.0563,18.0,1021
+   8k,_p16 hit=99.90%  full_miss=0
+[run_and_bench] KEEP_SERVER -> server left running
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+[profile] chờ 8 trace file trong /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/profiling_result (KỆ AssertionError của /stop_profile) ...
+[profile]   traces=8/8 size=2.53905e+09B (đã chờ 15s)
+[profile]   traces=8/8 size=2.53905e+09B (đã chờ 30s)
+[profile] OK: 8 trace file, size ổn định 2.53905e+09B
+[profile] EPLB npz (auto per-worker) -> 1/8 tại /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/eplb_tokens
+[profile] WARN: thiếu npz (xem serve.log: [EPLB][MV-4572] collect_eplb_buffer WROTE)
+[profile] stop server (/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof)
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+======== [profile v0.24.0] PRESET=r0_noV2_prof.yaml conc=16 ds=8k -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 1 presets x concs(16) x datasets(8k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k
+=================== r0_noV2_prof @ concs=16 ds=8k (1 serve, PROFILE) ===================
+[sweep] 8 GPU(s) busy; retry in 30s
+[sweep] GPUs free
+[profile] profiler dir = /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/profiling_result
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/preset.profile.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof
+[run_and_bench] serve pid=882079; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4620720 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=889483; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 16882..100592, 83710 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 8205..11282
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/decode_running/decode_running_8k_p16.csv (81023 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/decode_running/decode_running_8k_p16.totals.csv (11282 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.7852
+    max    : 19
+    median : 14.0000
+    p90    : 16.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,96,7961.1,21543.8,47.3859,21.2233,21.0869,23.7626,23.9321,98304,195.1102,503.8384,12.7852,19.0,1021
+   8k,_p16 hit=99.88%  full_miss=0
+[run_and_bench] KEEP_SERVER -> server left running
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+[profile] chờ 8 trace file trong /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/profiling_result (KỆ AssertionError của /stop_profile) ...
+[profile]   traces=8/8 size=2.84696e+09B (đã chờ 15s)
+[profile]   traces=8/8 size=2.84696e+09B (đã chờ 30s)
+[profile] OK: 8 trace file, size ổn định 2.84696e+09B
+[profile] EPLB npz (auto per-worker) -> 1/8 tại /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/eplb_tokens
+[profile] WARN: thiếu npz (xem serve.log: [EPLB][MV-4572] collect_eplb_buffer WROTE)
+[profile] stop server (/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof)
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_033344/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+======== [profile] LOGS -> auto-script/bench_mv4572/logs_analysis/20260718_044209/  (TS=20260718_044209) ========
+======== [profile v0.24.0] PRESET=r0_v2_prof.yaml conc=16 ds=8k -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 1 presets x concs(16) x datasets(8k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k
+=================== r0_v2_prof @ concs=16 ds=8k (1 serve, PROFILE) ===================
+[sweep] GPUs free
+[profile] profiler dir = /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/profiling_result
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/preset.profile.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof
+[run_and_bench] serve pid=901251; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4671616 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=908720; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 17225..80052, 62827 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 6155..10255
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/decode_running/decode_running_8k_p16.csv (60520 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/decode_running/decode_running_8k_p16.totals.csv (10255 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.8680
+    max    : 24
+    median : 15.0000
+    p90    : 18.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,97,5895.5,23643.6,42.0162,23.8597,24.4305,24.8859,24.8928,99328,193.3586,513.6984,12.868,24.0,1021
+   8k,_p16 hit=99.08%  full_miss=0
+[run_and_bench] KEEP_SERVER -> server left running
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+[profile] chờ 8 trace file trong /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/profiling_result (KỆ AssertionError của /stop_profile) ...
+[profile]   traces=8/8 size=2.52981e+09B (đã chờ 15s)
+[profile]   traces=8/8 size=2.52981e+09B (đã chờ 30s)
+[profile] OK: 8 trace file, size ổn định 2.52981e+09B
+[profile] EPLB npz (auto per-worker) -> 8/8 tại /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/eplb_tokens
+[profile] stop server (/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof)
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+======== [profile v0.24.0] PRESET=r0_noV2_prof.yaml conc=16 ds=8k -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 1 presets x concs(16) x datasets(8k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k
+=================== r0_noV2_prof @ concs=16 ds=8k (1 serve, PROFILE) ===================
+[sweep] 8 GPU(s) busy; retry in 30s
+[sweep] GPUs free
+[profile] profiler dir = /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/profiling_result
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/preset.profile.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof
+[run_and_bench] serve pid=920856; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4620720 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=928367; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 17085..106076, 88991 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 8206..12307
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/decode_running/decode_running_8k_p16.csv (86152 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/decode_running/decode_running_8k_p16.totals.csv (12307 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 11.9698
+    max    : 18
+    median : 12.0000
+    p90    : 17.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,98,7836.9,22239.7,47.9657,20.9605,20.0536,23.2167,23.3371,100352,192.6359,520.9413,11.9698,18.0,1021
+   8k,_p16 hit=99.90%  full_miss=0
+[run_and_bench] KEEP_SERVER -> server left running
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+[profile] chờ 8 trace file trong /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/profiling_result (KỆ AssertionError của /stop_profile) ...
+[profile]   traces=8/8 size=2.88664e+09B (đã chờ 15s)
+[profile]   traces=8/8 size=2.88664e+09B (đã chờ 30s)
+[profile] OK: 8 trace file, size ổn định 2.88664e+09B
+[profile] EPLB npz (auto per-worker) -> 8/8 tại /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/eplb_tokens
+[profile] stop server (/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof)
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_044209/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+======== [profile] LOGS -> auto-script/bench_mv4572/logs_analysis/20260718_063732/  (TS=20260718_063732) ========
+======== [profile v0.24.0] PRESET=r0_v2_prof.yaml conc=16 ds=8k -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 1 presets x concs(16) x datasets(8k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k
+=================== r0_v2_prof @ concs=16 ds=8k (1 serve, PROFILE) ===================
+[sweep] GPUs free
+[profile] profiler dir = /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/profiling_result
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/preset.profile.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof
+[run_and_bench] serve pid=940760; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4671616 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=948126; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 17377..79173, 61796 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 5130..10255
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/decode_running/decode_running_8k_p16.csv (59492 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/decode_running/decode_running_8k_p16.totals.csv (10255 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 13.2676
+    max    : 28
+    median : 13.0000
+    p90    : 25.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,101,5292.5,23574.2,42.3741,23.663,23.3992,25.1449,25.148,103424,193.9033,533.3793,13.2676,28.0,1021
+   8k,_p16 hit=99.90%  full_miss=0
+[run_and_bench] KEEP_SERVER -> server left running
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+[profile] chờ 8 trace file trong /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/profiling_result (KỆ AssertionError của /stop_profile) ...
+[profile]   traces=8/8 size=2.506e+09B (đã chờ 15s)
+[profile]   traces=8/8 size=2.506e+09B (đã chờ 30s)
+[profile] OK: 8 trace file, size ổn định 2.506e+09B
+[profile] EPLB npz (auto per-worker) -> 8/8 tại /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/eplb_tokens
+[profile] stop server (/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof)
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_v2_prof_c16_8k/r0_v2_prof/scenario_summary.csv
+======== [profile v0.24.0] PRESET=r0_noV2_prof.yaml conc=16 ds=8k -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k ========
+[check_nixl] rocm_ipc=0 ibv_devices=0 ucx_rdma_transports=0
+[check_nixl] no rocm_ipc and no RDMA NIC -> nixl NOT viable -> skip (use gloo for async)
+[sweep] WARNING: nixl NOT viable here -> preset nixl sẽ fail.
+[sweep] MODE=on | 1 presets x concs(16) x datasets(8k) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k
+=================== r0_noV2_prof @ concs=16 ds=8k (1 serve, PROFILE) ===================
+[sweep] 8 GPU(s) busy; retry in 30s
+[sweep] GPUs free
+[profile] profiler dir = /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/profiling_result
+[run_and_bench] preset=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/preset.profile.yaml
+[run_and_bench] RUN=/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof
+[run_and_bench] serve pid=960196; waiting for health...
+[run_and_bench] HEALTH OK
+[run_and_bench] server KV cache = 4620720 tokens -> REBENCH_KV_TOKENS (adaptive prompt count)
+[run_and_bench] bench pid=967772; running...
+[run_and_bench] bench DONE
+Found 1 window(s); 1 non-empty -> 1 scenario(s).
+
+Scenario #1 '8k_p16' (log window #1, lines 17097..96341, 79244 lines)
+
+=== scenario '8k_p16' ===
+  Ranks: 8  steps/rank: 8205..11280
+  Detail CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/decode_running/decode_running_8k_p16.csv (76915 rows)
+  Totals CSV : /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/decode_running/decode_running_8k_p16.totals.csv (11280 steps)
+  Per-step decode batch size (running reqs summed across ranks):
+    mean   : 12.2434
+    max    : 19
+    median : 14.0000
+    p90    : 16.0000
+
+Done: wrote results for 1 scenario(s).
+Wrote 1 scenario(s) -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+concurrency,ISL,requests,mean_ttft_ms,p90_ttft_ms,mean_decode_tps,mean_tpot_ms,p50_tpot_ms,p90_tpot_ms,p99_tpot_ms,total_output_tokens,benchmark_duration_s,output_tps,mean_decode_batch_size,sustained_max_decode_batch_size,steps_at_max_decode_batch_size
+16,8k,92,6762.2,22677.8,46.6072,21.5991,21.8396,24.3377,24.4477,94208,177.7531,529.9935,12.2434,19.0,1021
+   8k,_p16 hit=99.89%  full_miss=0
+[run_and_bench] KEEP_SERVER -> server left running
+[run_and_bench] -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv
+[profile] chờ 8 trace file trong /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/profiling_result (KỆ AssertionError của /stop_profile) ...
+[profile]   traces=8/8 size=2.69171e+09B (đã chờ 15s)
+[profile]   traces=8/8 size=2.69171e+09B (đã chờ 30s)
+[profile] OK: 8 trace file, size ổn định 2.69171e+09B
+[profile] EPLB npz (auto per-worker) -> 8/8 tại /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/eplb_tokens
+[profile] stop server (/shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof)
+[sweep] DONE -> /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k
+[sweep] summaries:
+  /shared/amdgpu/home/loc_tran_ce6/phuc-nguyen/mv-4572/auto-script/bench_mv4572/logs_analysis/20260718_063732/v0.24.0_r0_noV2_prof_c16_8k/r0_noV2_prof/scenario_summary.csv

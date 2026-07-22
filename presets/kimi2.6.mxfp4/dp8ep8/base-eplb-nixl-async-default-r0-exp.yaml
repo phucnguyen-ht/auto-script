@@ -1,0 +1,68 @@
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  # AITER_MOREH_ROOT_DIR: /shared/amdgpu/home/loc_tran_ce6/namle/workspaces/MV-4624/vllm-moreh/src/aiter_moreh/
+  # MOREH_DBG_HID: /shared/amdgpu/home/loc_tran_ce6/namle/workspaces/MV-4624/vllm-moreh/dbg/hid
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  # Per-step scheduler logging: required by scripts/extract_decode_running.py to
+  # extract per-step decode batch size (LOG_INTERVAL=0 -> every step).
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  # --- EXPERIMENTAL (MV-4572): cơ chế suppress warmup ---
+  # =1: EPLB khởi động ở trạng thái suppressed (step() no-op: không đếm counter / không
+  #     thu tải / không rearrange) từ ngay sau profile → warmup KHÔNG làm bẩn số đo.
+  #     Driver PHẢI gọi collective_rpc("eplb_arm") ở "gap" sau warmup (trước bench_start)
+  #     để bật lại; nếu chạy nhiều chu kỳ thì gọi collective_rpc("eplb_suppress") trước
+  #     mỗi warmup. LƯU Ý: =1 mà quên eplb_arm ⇒ bench cũng bị suppress (EPLB tắt).
+  # =0: giữ nguyên luồng EPLB gốc. (đang để 0 để test plumbing collective_rpc trước.)
+  VLLM_MOREH_EPLB_SUPPRESS_WARMUP: '0'
+  # =1: log thời gian per-layer async (transfer/sync/wait_main) + split nixl
+  #     (wait_xfers/barrier) để đo "drain" đi vào đâu. Bật khi cần điều tra.
+  VLLM_MOREH_EPLB_TIMING: '0'
+  # DEBUG (điều tra rocm_ipc): debug in md-registration + gán lane của endpoint.
+  # Cần thấy: khi register VRAM regions, md_map có bit rocm_ipc không, và vì sao
+  # rocm_ipc bị loại khỏi lane rma_bw của peer. Grep sau: 'md_map|ucp_mem_map|rocm_ipc|
+  # mem_reg|rkey|rma_bw|lane\['. CHỈ cần chạy tới STARTUP (EPLB init) rồi Ctrl-C — log
+  # debug rất dài. Đổi lại 'info' khi xong điều tra.
+  # Pin serve to 4 physical GPUs (4,5,6,7 -> cuda:0-3). serve.sh exports preset
+  # env_vars before `vllm serve`, and vLLM syncs HIP<->CUDA (platforms/rocm.py:115),
+  # so this alone restricts the visible set. MUST pair with tensor_parallel_size=4 +
+  # data_parallel_size=1 below (VISIBLE_DEVICES alone is NOT enough — the run still
+  # follows parallelism_args). Remove this line to use all 8 GPUs again.
+  # HIP_VISIBLE_DEVICES: '4,5,6,7'
+
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: "none"
+  UCX_LOG_LEVEL: info
+  UCX_PROTO_INFO: 'y'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+parallelism_args:
+  # TP4 on 4 GPUs (pinned to 4,5,6,7 via env_vars.HIP_VISIBLE_DEVICES above).
+  # world=TP4*DP1=4 -> EP=4 (enable_expert_parallel) -> 384/4 = 96 experts/rank,
+  # so EPLB still runs. NOTE: this differs from the DP4/TP1 sweep variants
+  # (base-eplb-*-r{0,8,16,32}.yaml) — revert to TP1/DP4 to compare against those.
+  tensor_parallel_size: 8
+  data_parallel_size: 1
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  # enforce_eager: true
+
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  # PDSLoggingScheduler emits the per-step "[Server-side (scheduler) stats]" lines
+  # that extract_decode_running.py parses (paired with VLLM_MOREH_SCHEDULER_LOGGING).
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": true, "communicator": "nixl"}'
+  # toggle balancedness logging: uncomment next line + comment eplb_config above
+  # eplb_config: '{"use_async": true, "communicator": "nixl", "log_balancedness": true, "log_balancedness_interval": 1}'

@@ -1,0 +1,46 @@
+# [phuc-ablation A17] Dứt điểm: machinery = layer-CONSTRUCTION (eplb_state set) hay per-forward ops?
+# A16 (SKIP_REMAP + FIX_A + SKIP_COMMUNICATOR, layer ON) VẪN +11% → SKIP_REMAP không gỡ machinery.
+# Recover CHỈ khi LAYER_OFF (eplb_state=None: A9/A12). A17 = A16 + SKIP_VALIDATE + SKIP_STEP:
+#   layer ON (eplb_state SET, ExpertMapManager enable_eplb=True) nhưng MỌI per-forward eplb op skip
+#   (remap+validate+step) + FIX_A + NoOp comm. So A9 (LAYER_OFF + cùng skips):
+#   - A17 +10% (như A16) => eplb_state-SET / layer-construction (ExpertMapManager placement -> _expert_map
+#       -> all2all/dispatch khác) là INHERENT ở V2 => KHÔNG config layer-on nào sạch => fix phải là V2 amplifier.
+#   - A17 ≈ A0 (recover)  => validate/step là nguồn (skip được) => minimal layer-on config = A17.
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+  MV4572_SKIP_EPLB_REMAP: "1"
+  MV4572_EPLB_SKIP_VALIDATE: "1"
+  MV4572_SKIP_EPLB_STEP: "1"
+  MV4572_EPLB_GROUP_NO_DEVICE_COMM: "1"
+  MV4572_EPLB_SKIP_COMMUNICATOR: "1"
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "200"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": false, "communicator": "nixl", "step_interval": 1000000000}'

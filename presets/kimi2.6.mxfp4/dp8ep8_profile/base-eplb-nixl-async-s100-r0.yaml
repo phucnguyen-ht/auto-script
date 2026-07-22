@@ -1,0 +1,46 @@
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  # AITER_MOREH_ROOT_DIR: /shared/amdgpu/home/loc_tran_ce6/namle/workspaces/MV-4624/vllm-moreh/src/aiter_moreh/
+  # MOREH_DBG_HID: /shared/amdgpu/home/loc_tran_ce6/namle/workspaces/MV-4624/vllm-moreh/dbg/hid
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  # Per-step scheduler logging: required by scripts/extract_decode_running.py to
+  # extract per-step decode batch size (LOG_INTERVAL=0 -> every step).
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  # Dev endpoints (/reset_prefix_cache, /collective_rpc) the driver calls per
+  # dataset/scenario. Required for the bench flow (multi_process_test.py:reset_prefix_cache).
+  # MV-4572: log timing EPLB (transfer/wait_xfers/barrier) để tune; + UCX error-handling mode.
+  # VLLM_MOREH_EPLB_UCX_ERR_MODE=none: ep NIXL dùng UCP_ERR_HANDLING_MODE_NONE -> rocm_ipc lên
+  # lane rma_bw (xGMI, nhanh ~chục lần); bỏ/'peer' = gốc (tcp+staging). Chi tiết:
+  # eplb_src/ROCM_IPC_ROOTCAUSE.md. (Không tác động preset non-nixl / base.)
+  VLLM_MOREH_EPLB_TIMING: '0'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  profiler_config: '{"profiler":"torch","torch_profiler_dir":"__RUN_PROFILER_DIR__","torch_profiler_with_stack":"False","torch_profiler_record_shapes":"False","torch_profiler_with_memory":"False","torch_profiler_with_flops":"False"}'
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  # enforce_eager: true
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  # PDSLoggingScheduler emits the per-step "[Server-side (scheduler) stats]" lines
+  # that extract_decode_running.py parses (paired with VLLM_MOREH_SCHEDULER_LOGGING).
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  enable_eplb: true
+  eplb_config: '{"use_async": true, "communicator": "nixl", "window_size": 100, "step_interval": 100}'
+  # toggle balancedness logging: uncomment next line + comment eplb_config above
+  # eplb_config: '{"use_async": true, "communicator": "nixl", "window_size": 100, "step_interval": 100, "log_balancedness": true, "log_balancedness_interval": 1}'

@@ -1,0 +1,34 @@
+# [Task2 Phase B] PROFILE base V2 (EPLB OFF) (VLLM_USE_V2_MODEL_RUNNER=1) — conc16/8k, gpu_mem 0.85.
+# Mục tiêu: so trace r0_v2 vs r0_noV2 (cùng EPLB r0, cùng 0.85, chỉ khác V2) -> WHY V2 hại EPLB.
+# 3 tín hiệu SẠCH trong 1 run: (1) TIME = torch profiler trace 8 rank; (2) #tokens = npz
+#   để trace KHÔNG bị phồng bởi all_reduce mỗi step).
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "1"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_MOREH_EPLB_TIMING: '1'
+  VLLM_MOREH_EPLB_UCX_ERR_MODE: 'none'
+  UCX_TLS: tcp,self,sm,rocm_copy,rocm_ipc,rc_x
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  profiler_config: '{"profiler":"torch","torch_profiler_dir":"__RUN_PROFILER_DIR__","torch_profiler_with_stack":"False","torch_profiler_record_shapes":"False","torch_profiler_with_memory":"False","torch_profiler_with_flops":"False","ignore_frontend":"True"}'
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler
+  # khớp run proven (093511/112655); interval CHỈ điều tần [EPLB balance] log, KHÔNG ảnh hưởng npz.

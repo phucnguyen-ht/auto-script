@@ -1,0 +1,33 @@
+# [phuc-ablation V1_off] MODEL_RUNNER_V1 + EPLB OFF. Baseline cho trục V1-vs-V2.
+# = A0 nhưng VLLM_USE_V2_MODEL_RUNNER=0. gpu_mem 0.85 (khớp mọi config EPLB để loại gpu_mem confound).
+# So sánh:
+#   (V1_off vs A0=V2_off)   = PURE RUNNER effect (V1->V2 regress bao nhiêu khi KHÔNG EPLB?).
+#   (V1_on vs V1_off)       = EPLB effect DƯỚI V1 (V1 có chịu group+machinery không?).
+env_vars:
+  VLLM_MOREH_USE_AITER_MLA_PREFILL: "1"
+  VLLM_ROCM_USE_AITER: '1'
+  VLLM_ROCM_USE_AITER_MOE: '1'
+  VLLM_USE_V2_MODEL_RUNNER: "0"
+  VLLM_MOREH_SKIP_AITER_FMOE_PATCH: '1'
+  VLLM_MOREH_USE_PD_SEPARATION: '1'
+  VLLM_MOREH_SCHEDULER_LOGGING: '1'
+  VLLM_MOREH_SCHEDULER_LOG_INTERVAL: '0'
+  VLLM_SERVER_DEV_MODE: '1'
+  VLLM_ENGINE_READY_TIMEOUT_S: '7200'
+  MV4572_FWDDEV: "1"
+  MV4572_FWDDEV_EVERY: "200"
+parallelism_args:
+  tensor_parallel_size: 1
+  data_parallel_size: 8
+  enable_expert_parallel: true
+engine_args:
+  trust_remote_code: true
+  attention_backend: ROCM_AITER_MLA
+  mm_encoder_tp_mode: data
+  gpu_memory_utilization: 0.85
+  kv_cache_dtype: fp8_e4m3
+  enable_prefix_caching: true
+  reasoning_parser: kimi_k2
+  enable_auto_tool_choice: true
+  tool_call_parser: kimi_k2
+  scheduler_cls: vllm_moreh.sched.pds_scheduler.PDSLoggingScheduler

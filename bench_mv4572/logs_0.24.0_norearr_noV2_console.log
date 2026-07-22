@@ -1,0 +1,9 @@
+======== [norearr] debounce GPU free >= 60s (poll 30s, VRAM thr 10%, rocm-smi-empty=busy) ========
+[norearr] ...vẫn đợi GPU (busy=8) @09:45:15
+[norearr] ...vẫn đợi GPU (busy=8) @09:50:16
+[norearr] ...vẫn đợi GPU (busy=8) @09:55:17
+[norearr] ...vẫn đợi GPU (busy=8) @10:00:18
+[norearr] GPU free bắt đầu @10:02:19
+[norearr] GPU free 0s / 60s
+[norearr] GPU free 30s / 60s
+[norearr] GPU busy lại (8 gpu) -> reset đồng hồ @10:03:19
